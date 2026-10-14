@@ -1180,10 +1180,16 @@ export class RoyaleEngine {
         const dir = sol.power > 60 ? -1 : 1;
         angle = sol.angle;
         power = sol.power;
-        for (let attempt = 0; attempt < 8; attempt++) {
+        let found = false;
+        for (let attempt = 0; attempt < 16 && !found; attempt++) {
           angle = clamp(sol.angle + rand(-9, 9), 5, 88);
           power = clamp(Math.round(sol.power + dir * rand(10, 26)), 8, 100);
-          if (this.boxes.every((bx) => !simShot(p.x, p.y, facing, angle, power, this.wind, bx.x, bx.y, BOX_HIT_R).hit)) break;
+          found = this.boxes.every((bx) => !simShot(p.x, p.y, facing, angle, power, this.wind, bx.x, bx.y, BOX_HIT_R).hit);
+        }
+        if (!found) {
+          // no safe miss from here: do not fire a shot that would count as a hit, look again shortly
+          p.botNextShotAt = this.time + 200;
+          return;
         }
       }
       p.angle = angle;

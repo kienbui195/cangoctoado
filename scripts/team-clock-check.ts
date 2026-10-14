@@ -248,7 +248,7 @@ block('bot levels', () => {
     let hits = 0;
     let opened = 0;
     let correct = 0;
-    for (let n = 0; n < 40; n++) {
+    for (let n = 0; n < 60; n++) {
       const e = new RoyaleEngine([prof('A'), prof('B')], { bots: [true, true], botLevel: lv } as any);
       const fc = (e as any).fireCollect.bind(e);
       (e as any).fireCollect = (...a: unknown[]) => {
@@ -266,8 +266,8 @@ block('bot levels', () => {
         correct += s.correct;
       });
     }
-    ok(shots > 300 && near(hits / shots, acc, 0.06), `AC-10.x: ${lv} bot hits ${(100 * hits / Math.max(1, shots)).toFixed(0)}% of ${shots} shots (want ${acc * 100}%)`);
-    ok(opened > 200 && near(correct / opened, ans, 0.07), `AC-10.5: ${lv} bot answers ${(100 * correct / Math.max(1, opened)).toFixed(0)}% right of ${opened} (want ${ans * 100}%)`);
+    ok(shots > 500 && near(hits / shots, acc, 0.05), `AC-10.x: ${lv} bot hits ${(100 * hits / Math.max(1, shots)).toFixed(0)}% of ${shots} shots (want ${acc * 100}%)`);
+    ok(opened > 350 && near(correct / opened, ans, 0.06), `AC-10.5: ${lv} bot answers ${(100 * correct / Math.max(1, opened)).toFixed(0)}% right of ${opened} (want ${ans * 100}%)`);
   }
   // boundary with a stubbed random number
   const realRandom = Math.random;
