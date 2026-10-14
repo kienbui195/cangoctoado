@@ -1,0 +1,8 @@
+{
+  "name": "Gunny Web Classic - Pháo Thủ Đại Chiến",
+  "description": "Game mô phỏng Gunny chuẩn xác với vật lý đạn đạo, gió, thước đo lực, góc bắn, đạo cụ chiến đấu và trang bị nhân vật.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

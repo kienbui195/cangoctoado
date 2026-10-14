@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "lib": ["ES2022", "DOM"],
+    "outDir": "dist",
+    "rootDir": "..",
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts", "../src/game/**/*.ts", "../src/data/**/*.ts", "../src/utils/questionCsv.ts", "../src/utils/gunnyPhysics.ts", "../src/utils/terrain.ts", "../src/utils/playerStorage.ts", "../src/types/game.ts"],
+  "exclude": ["../src/**/*.tsx"]
+}

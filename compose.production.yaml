@@ -1,0 +1,56 @@
+# Ban demo "Can Goc Toa Do": container Caddy chi bind 127.0.0.1:45214.
+# Cloudflare Tunnel (systemd --user cloudflared-app@cangoctoado) la duong duy nhat tu internet vao.
+# Bat: `cangoctoado-prod` (bashrc) hoac `docker compose -f compose.production.yaml up -d --build --wait`.
+name: cangoctoado
+services:
+  # API online: network host de noi MariaDB local (chi nghe 127.0.0.1:3306); chi bind 127.0.0.1:45215.
+  # Cloudflare Tunnel dua /api va /socket.io vao day, con lai vao web (xem ~/.cloudflared/apps/cangoctoado.yml).
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: cangoctoado-api:prod
+    container_name: cangoctoado-api
+    restart: unless-stopped
+    network_mode: host
+    env_file: server/.env
+    environment:
+      HOST: 127.0.0.1
+      PORT: "45215"
+      NODE_ENV: production
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:45215/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  web:
+    build: .
+    image: cangoctoado-web:prod
+    container_name: cangoctoado-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:45214:80"
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+volumes:
+  caddy_data:
+  caddy_config:
