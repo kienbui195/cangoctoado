@@ -306,7 +306,7 @@ class AudioManager {
   // Auto-battle charge-up: a soft rising "chiu chiu" that ends the moment the shell flies (stopChargeUp)
   private charge: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
 
-  playChargeUp(durationMs: number = 1300) {
+  playChargeUp(durationMs: number = 2000) {
     const ctx = this.getContext();
     if (!ctx) return;
     this.stopChargeUp(0.02);

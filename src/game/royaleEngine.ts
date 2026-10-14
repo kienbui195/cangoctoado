@@ -39,6 +39,10 @@ export const SINH_STEP = 0.05;
 export const SAME_BASE = 0.2;
 export const SAME_STEP = 0.05;
 const STEP_MS = 1000 / 60;
+/** Battle turn pacing: the charge-up, then the impact when something was hit / when nothing was (rare fallback shot). */
+export const CHARGE_MS = 2000;
+export const IMPACT_HIT_MS = 2200;
+export const IMPACT_MISS_MS = 900;
 // Collection is turn-based: seats shoot one after another.
 export const TURN_AIM_MS = 15 * 1000; // aim + fire
 const TURN_GAP_MS = 700; // pause between two turns
@@ -290,6 +294,8 @@ interface Turn {
   sinhBonus: number; // 0 when no chain
   sameBonus: number; // same-element combo: extra effect strength only
   impactMs: number;
+  /** at least one shell landed on the target (known once the last shell has ended) */
+  hit: boolean;
   dotsEndAt: number;
 }
 
@@ -339,6 +345,8 @@ export interface SnapshotTurn {
   sinh: boolean;
   khac: boolean;
   boost: number;
+  /** absent from an older server: the client treats it as a hit */
+  hit?: boolean;
 }
 
 export interface Snapshot {
@@ -1641,7 +1649,8 @@ export class RoyaleEngine {
       boost: 1,
       sinhBonus: 0,
       sameBonus: 0,
-      impactMs: 900,
+      impactMs: IMPACT_MISS_MS,
+      hit: false,
       dotsEndAt: 0,
     };
     shooter.empower = 0;
@@ -1685,7 +1694,7 @@ export class RoyaleEngine {
     const bt = this.battle!;
     const t = bt.turn!;
     const sh = this.players[t.shooter];
-    const k = clamp(bt.stepT / 1300, 0, 1);
+    const k = clamp(bt.stepT / CHARGE_MS, 0, 1);
     const tierColor = TIERS[t.ow.tier].color;
 
     if (Math.floor(bt.stepT / STEP_MS) % 4 === 0) {
@@ -1709,7 +1718,7 @@ export class RoyaleEngine {
     }
     this.kick(k * 3);
 
-    if (bt.stepT >= 1300) {
+    if (bt.stepT >= CHARGE_MS) {
       // BURST
       this.burst(sh.x, sh.y - 24, t.w.color, t.w.fx, 36, 9);
       this.ring(sh.x, sh.y - 24, 10, 150, tierColor, 30);
@@ -1931,6 +1940,9 @@ export class RoyaleEngine {
           break;
       }
     }
+    t.hit = landed;
+    t.impactMs = landed ? IMPACT_HIT_MS : IMPACT_MISS_MS;
+    if (landed && t.ow.element === 'hoa') this.kick(16); // the big fire blast shakes the screen
     bt.step = 'impact';
     bt.stepT = 0;
   }
@@ -2156,7 +2168,7 @@ export class RoyaleEngine {
             stepT: bt.stepT,
             wind: bt.wind,
             turn: bt.turn
-              ? { shooter: bt.turn.shooter, target: bt.turn.target, ow: bt.turn.ow, sinh: bt.turn.sinh, khac: bt.turn.khac, boost: bt.turn.boost, sinhBonus: bt.turn.sinhBonus, sameBonus: bt.turn.sameBonus }
+              ? { shooter: bt.turn.shooter, target: bt.turn.target, ow: bt.turn.ow, sinh: bt.turn.sinh, khac: bt.turn.khac, boost: bt.turn.boost, sinhBonus: bt.turn.sinhBonus, sameBonus: bt.turn.sameBonus, hit: bt.turn.hit }
               : null,
           }
         : null,
@@ -2242,6 +2254,7 @@ export class RoyaleEngine {
                 shieldOnTarget: 0,
                 raw: 0,
                 impactMs: 0,
+                hit: s.battle.turn.hit !== false,
                 dotsEndAt: 0,
               }
             : null,

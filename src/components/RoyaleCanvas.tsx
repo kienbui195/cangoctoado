@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { REACTION_MS, RoyaleEngine, RPlayer } from '../game/royaleEngine';
+import { CHARGE_MS, REACTION_MS, RoyaleEngine, RPlayer } from '../game/royaleEngine';
+import { drawElementFx, drawShellFx, fxQuality } from './elementFx';
 import { ELEMENTS, TIERS, WEAPON_BY_ID } from '../data/royaleWeapons';
 import { createTerrainCanvas, WORLD_H, WORLD_W } from '../utils/terrain';
 import { soundManager } from '../utils/audio';
@@ -31,6 +32,7 @@ export const RoyaleCanvas: React.FC<Props> = ({ engine }) => {
 
     const frame = (now: number) => {
       engine.update(now - last);
+      fxQuality.feed(now - last);
       last = now;
       drain(engine, sfxState);
       draw(ctx, engine, terrain, now);
@@ -187,6 +189,7 @@ function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanva
 
   // charge-up aura / giant weapon icon
   drawChargeAura(ctx, e, now);
+  drawElementFx(ctx, e, now);
 
   // shells
   e.shells.forEach((s) => {
@@ -197,6 +200,7 @@ function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanva
     s.trail.forEach((pt, i) => (i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
     ctx.stroke();
     ctx.globalAlpha = 1;
+    if (s.kind === 'battle') drawShellFx(ctx, s);
     ctx.save();
     ctx.translate(s.x, s.y);
     if (s.kind === 'battle') {
@@ -521,7 +525,7 @@ function drawChargeAura(ctx: CanvasRenderingContext2D, e: RoyaleEngine, now: num
   const sh = e.players[t.shooter];
   const w = WEAPON_BY_ID[t.ow.weaponId];
   const tier = TIERS[t.ow.tier];
-  const k = Math.min(1, bt.stepT / 1300);
+  const k = Math.min(1, bt.stepT / CHARGE_MS);
 
   ctx.save();
   ctx.translate(sh.x, sh.y - 22);
