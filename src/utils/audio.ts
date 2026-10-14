@@ -262,6 +262,103 @@ class AudioManager {
       osc.stop(now + i * 0.08 + 0.3);
     });
   }
+
+  /** One enveloped note: `type` wave gliding from `from` to `to` Hz over `dur` s, starting `at` s from now, peak gain `vol`. */
+  private tone(ctx: AudioContext, type: OscillatorType, from: number, to: number, at: number, dur: number, vol: number) {
+    const t = ctx.currentTime + at;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, t);
+    if (to !== from) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+
+  // Shell hits a gift box: a short dry "bốp" (the cheer comes later, only for a right answer)
+  playBoxHit() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    this.tone(ctx, 'sine', 220, 70, 0, 0.13, 0.28);
+    this.tone(ctx, 'square', 1400, 500, 0, 0.05, 0.1);
+  }
+
+  // Right answer: bright rising fanfare
+  playCheer() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((freq, i) => this.tone(ctx, 'triangle', freq, freq, i * 0.07, 0.28, 0.22));
+  }
+
+  // Wrong answer: two sagging "wah-wah" notes
+  playWrong() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    this.tone(ctx, 'sawtooth', 330, 250, 0, 0.27, 0.16);
+    this.tone(ctx, 'sawtooth', 262, 170, 0.28, 0.27, 0.16);
+  }
+
+  // Auto-battle charge-up: a soft rising "chiu chiu" that ends the moment the shell flies (stopChargeUp)
+  private charge: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
+
+  playChargeUp(durationMs: number = 1300) {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    this.stopChargeUp(0.02);
+    const now = ctx.currentTime;
+    const dur = durationMs / 1000;
+    const hardStop = now + dur + 0.3; // safety: never longer than the charge + 0.3 s even if the stop event is lost
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(1500, now + dur);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.12);
+    lfo.frequency.value = 14;
+    lfoGain.gain.value = 0.03;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(hardStop);
+    lfo.stop(hardStop);
+    this.charge = { osc, lfo, gain };
+  }
+
+  stopChargeUp(fadeSec: number = 0.1) {
+    const node = this.charge;
+    const ctx = this.ctx;
+    this.charge = null;
+    if (!node || !ctx) return;
+    const t = ctx.currentTime;
+    try {
+      node.gain.gain.cancelScheduledValues(t);
+      node.gain.gain.setValueAtTime(Math.max(node.gain.gain.value, 0.0001), t);
+      node.gain.gain.linearRampToValueAtTime(0.0001, t + fadeSec);
+      node.osc.stop(t + fadeSec);
+      node.lfo.stop(t + fadeSec);
+    } catch {
+      /* already stopped */
+    }
+  }
+
+  // Shell hits a player: heavier than a normal explosion (boom + low thump)
+  playHitPlayer() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    this.playExplode(true);
+    this.tone(ctx, 'sine', 110, 38, 0, 0.4, 0.38);
+  }
 }
 
 export const soundManager = new AudioManager();

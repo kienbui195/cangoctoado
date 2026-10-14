@@ -3,9 +3,11 @@ import { motion } from 'motion/react';
 import { soundManager } from '../utils/audio';
 import { QuestionBankModal } from './QuestionBankModal';
 import { bankStats, isCustomBank } from '../data/questions';
+import { BotLevelModal } from './BotLevelModal';
+import type { BotLevel } from '../game/royaleEngine';
 
 interface Props {
-  onStart: () => void;
+  onStart: (level: BotLevel) => void;
   onOnline: () => void;
   onClassic: () => void;
 }
@@ -15,6 +17,7 @@ const FLOATERS = ['🧊', '🩴', '🔫', '🗑️', '📖', '🥥', '🍳', '�
 // Waiting screen: one big "bắt đầu chơi" button.
 export const LobbyScreen: React.FC<Props> = ({ onStart, onOnline, onClassic }) => {
   const [bankOpen, setBankOpen] = useState(false);
+  const [pickBot, setPickBot] = useState(false);
   const st = bankStats();
   return (
   <div className="relative h-screen overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-teal-950 text-slate-100 flex flex-col items-center justify-center font-['Nunito',sans-serif]">
@@ -41,7 +44,7 @@ export const LobbyScreen: React.FC<Props> = ({ onStart, onOnline, onClassic }) =
     <motion.button
       onClick={() => {
         soundManager.playClick();
-        onStart();
+        setPickBot(true);
       }}
       whileHover={{ scale: 1.06 }}
       whileTap={{ scale: 0.95 }}
@@ -76,6 +79,7 @@ export const LobbyScreen: React.FC<Props> = ({ onStart, onOnline, onClassic }) =
       Chế độ cổ điển (luyện bắn / 1v1 theo lượt)
     </button>
       {bankOpen && <QuestionBankModal onClose={() => setBankOpen(false)} />}
+      {pickBot && <BotLevelModal onPick={(lv) => { setPickBot(false); onStart(lv); }} onClose={() => setPickBot(false)} />}
   </div>
   );
 };

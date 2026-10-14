@@ -24,9 +24,11 @@ import {
 import { askQuestion, AskedQuestion, Difficulty } from '../data/questions';
 
 // ---------------------------------------------------------------- tunables
-export const COLLECT_MS = 5 * 60 * 1000;
+// Collection clock: every team has its own, it only runs while a seat of that team is thinking / aiming (like a chess clock).
+export const COLLECT_TEAM_MS = 3 * 60 * 1000; // 1v1 and 2v2
+export const COLLECT_TEAM_MS_BIG = 5 * 60 * 1000; // 3 or more seats per team
 export const INTRO_MS = 2000;
-export const ARRANGE_MS = 2 * 60 * 1000;
+export const ARRANGE_MS = 3 * 60 * 1000;
 export const WEAPONS_TO_WIN = 7;
 export const MAX_LINEUP = 6;
 export const UPGRADES_PER_PLAYER = 3;
@@ -54,12 +56,20 @@ const QUIZ_CLOSE_OK_MS = 2600;
 const QUIZ_CLOSE_BAD_MS = 1700;
 export const SNAPSHOT_HZ = 30;
 
-// bot (player 2) behaviour — hits ~80% of its shots, thinks 5-12s per question, random right/wrong
-export const BOT_SIGMA_ANGLE = 1.4;
-export const BOT_SIGMA_POWER = 2.6;
+// bot behaviour: the level fixes how often a shot is aimed true and how often a question is answered right; it thinks 5-12s per question
+export type BotLevel = 'easy' | 'medium' | 'super';
+export const BOT_LEVELS: Record<BotLevel, { label: string; hit: number; correct: number }> = {
+  easy: { label: 'Dễ', hit: 0.5, correct: 0.4 },
+  medium: { label: 'Trung bình', hit: 0.7, correct: 0.7 },
+  super: { label: 'Siêu cấp', hit: 0.85, correct: 0.85 },
+};
+export const DEFAULT_BOT_LEVEL: BotLevel = 'medium';
+export const isBotLevel = (v: unknown): v is BotLevel => typeof v === 'string' && Object.prototype.hasOwnProperty.call(BOT_LEVELS, v);
+const BOT_AIM_SIGMA_ANGLE = 0.25; // a shot aimed true still wobbles a little
+const BOT_AIM_SIGMA_POWER = 0.5;
+export const REACTION_MS = 2000; // how long the cheer / sad emoji stays above a player after a question
 const BOT_SHOT_GAP_MS: [number, number] = [1500, 4000]; // thinking time before the bot fires on its turn
 const BOT_THINK_MS: [number, number] = [5000, 12000];
-const BOT_CORRECT_RATE: Record<Tier, number> = { white: 0.85, blue: 0.62, red: 0.4 };
 
 // battle damage scale: base(~100) * tier * attack/1000 * K
 const DAMAGE_K = 8;
@@ -180,6 +190,8 @@ export interface RPlayer {
   botAskedAt: number;
   lastAction?: string; // small caption under the avatar
   speech?: { text: string; until: number }; // taunt bubble above the head
+  /** cheer / sad emoji after a box question, seen by the whole room */
+  reaction?: { emoji: string; until: number };
   input: SeatInput;
   /** gift box this seat clicked (the ruler suggests the power for it) */
   selectedBoxId: number | null;
@@ -309,6 +321,8 @@ export interface EngineOptions {
   emitFx?: boolean;
   /** question source (the server uses the room's CSV bank) */
   ask?: (difficulty: Difficulty, used: Set<string>) => AskedQuestion;
+  /** how good the built-in bots are (practice mode); anything else falls back to the default */
+  botLevel?: BotLevel;
 }
 
 export type PublicPlayer = Omit<
@@ -331,6 +345,9 @@ export interface Snapshot {
   time: number;
   phase: Phase;
   phaseT: number;
+  /** collection clock of each team (A, B) */
+  teamLeft: [number, number];
+  /** older clients only know this one: the larger team clock */
   collectLeft: number;
   arrangeLeft: number;
   wind: number;
@@ -497,7 +514,8 @@ export class RoyaleEngine {
   time = 0;
   phase: Phase = 'intro';
   phaseT = 0;
-  collectLeft = COLLECT_MS;
+  teamLeft: [number, number] = [COLLECT_TEAM_MS, COLLECT_TEAM_MS];
+  readonly botLevel: BotLevel;
   arrangeLeft = ARRANGE_MS;
   wind = 1.2;
 
@@ -555,6 +573,9 @@ export class RoyaleEngine {
     if (profiles.length < 2 || profiles.length > MAX_SEATS || profiles.length % 2 !== 0) throw new Error('RoyaleEngine needs 2, 4, 6 or 8 seats');
     const bots = opts.bots ?? profiles.map((_, i) => i !== 0);
     this.emitFx = !!opts.emitFx;
+    this.botLevel = isBotLevel(opts.botLevel) ? opts.botLevel : DEFAULT_BOT_LEVEL;
+    const quota = profiles.length / 2 >= 3 ? COLLECT_TEAM_MS_BIG : COLLECT_TEAM_MS;
+    this.teamLeft = [quota, quota];
     this.ask = opts.ask ?? askQuestion;
     const mk = (idx: Seat, prof: EngineProfile, x: number, facing: 1 | -1, color: string): RPlayer => ({
       idx,
@@ -767,10 +788,18 @@ export class RoyaleEngine {
       }
     }
     if (correct) this.stats[seat].correct++;
+    if (qz.kind === 'collect') this.react(me, correct);
     this.stats[seat].answerMsTotal += Math.min(QUIZ_LIMIT_MS, this.time - qz.shownAt);
     qz.result = { correct, reward };
     qz.closeAt = this.time + (correct ? QUIZ_CLOSE_OK_MS : QUIZ_CLOSE_BAD_MS);
     this.emit();
+  }
+
+  /** Cheer or sad feedback above the player after a box question: the whole room sees and hears what is going on. */
+  private react(p: RPlayer, correct: boolean) {
+    const pool = correct ? ['🎉', '🥳'] : ['😭', '😤'];
+    p.reaction = { emoji: pool[randInt(0, pool.length - 1)], until: this.time + REACTION_MS };
+    this.sfx(correct ? 'correct' : 'wrong');
   }
 
   closeQuiz(seat: Seat) {
@@ -890,6 +919,7 @@ export class RoyaleEngine {
         // the turn in progress involved this seat: drop it and go on with the next shooter
         this.shells = this.shells.filter((s) => s.kind !== 'battle');
         this.dots = [];
+        if (bt.step === 'charge') this.sfx('chargestop');
         bt.turn = null;
         this.banner = null;
         this.advanceTurnCounter();
@@ -918,6 +948,7 @@ export class RoyaleEngine {
     this.phaseT += STEP_MS;
     this.stepFx();
     this.stepQuizzes();
+    for (const q of this.players) if (q.reaction && this.time >= q.reaction.until) q.reaction = undefined;
     switch (this.phase) {
       case 'intro':
         if (this.phaseT >= INTRO_MS) this.setPhase('collect');
@@ -948,14 +979,6 @@ export class RoyaleEngine {
 
   // ================================================================= COLLECT
   private stepCollect() {
-    if (!this.finishing) {
-      this.collectLeft -= STEP_MS;
-      if (this.collectLeft <= 0) {
-        this.collectLeft = 0;
-        this.beginFinishing('time');
-      }
-    }
-
     this.stepShells();
     this.stepCollectTurn();
     this.stepRespawn();
@@ -993,9 +1016,21 @@ export class RoyaleEngine {
     return seat;
   }
 
+  /** Both teams have used up their collection clock. */
+  private teamsOut(): boolean {
+    return this.teamLeft[0] <= 0 && this.teamLeft[1] <= 0;
+  }
+
   private startTurn(first: Seat) {
     const seat = this.liveSeat(first);
     const p = this.players[seat];
+    if (this.teamLeft[teamOf(seat)] <= 0) {
+      // this team has no time left: its turn passes at once, the rhythm of the other seats stays the same
+      if (this.teamsOut()) this.beginFinishing('time');
+      this.cturn = { seat: this.liveSeat((seat + 1) % this.players.length), step: 'gap', until: this.time, startedAt: this.time, box: null };
+      this.emit();
+      return;
+    }
     this.cturn = { seat, step: 'aim', until: this.time + TURN_AIM_MS, startedAt: this.time, box: null };
     p.status = 'idle';
     p.charging = false;
@@ -1036,7 +1071,18 @@ export class RoyaleEngine {
         else this.stepHuman(p);
         ct = this.cturn; // a violation may have ended the turn or the whole match
         if (!ct || this.phase !== 'collect') return;
-        if (ct.step === 'aim' && p.charging) ct.until += STEP_MS; // holding the power bar pauses the turn clock
+        if (ct.step === 'aim' && p.charging) ct.until += STEP_MS; // holding the power bar pauses the turn clock (and the team clock)
+        else if (ct.step === 'aim') {
+          // only the team of the seat that is thinking / aiming pays; flight, questions and the gap between turns are free
+          const team = teamOf(p.idx);
+          this.teamLeft[team] = Math.max(0, this.teamLeft[team] - STEP_MS);
+          if (this.teamLeft[team] <= 0) {
+            this.addFloater(p.x, p.y - 90, `⏱ Hết giờ đội ${TEAM_LABEL[team]}`, '#fbbf24', 16, 80);
+            this.endTurn_collect();
+            if (this.teamsOut()) this.beginFinishing('time');
+            break;
+          }
+        }
         if (ct.step === 'aim' && this.time >= ct.until) {
           this.addFloater(p.x, p.y - 90, '⏱ Hết giờ ngắm', '#fbbf24', 15, 70);
           this.endTurn_collect();
@@ -1122,8 +1168,25 @@ export class RoyaleEngine {
       const sol = bestAim(p.x, p.y, facing, this.wind, b.x, b.y, BOX_HIT_R);
       if (!sol) continue;
       p.facing = facing;
-      p.angle = clamp(sol.angle + gauss() * BOT_SIGMA_ANGLE, 5, 88);
-      const power = clamp(Math.round(sol.power + gauss() * BOT_SIGMA_POWER), 8, 100);
+      let angle: number;
+      let power: number;
+      if (Math.random() < BOT_LEVELS[this.botLevel].hit) {
+        // aimed true: only a tiny wobble
+        angle = clamp(sol.angle + gauss() * BOT_AIM_SIGMA_ANGLE, 5, 88);
+        power = clamp(Math.round(sol.power + gauss() * BOT_AIM_SIGMA_POWER), 8, 100);
+      } else {
+        // aimed badly on purpose: off in power (towards the side that has room) and in angle, and checked against EVERY box
+        // so the shot really misses (a wild shot often clips another box, which would hide the level)
+        const dir = sol.power > 60 ? -1 : 1;
+        angle = sol.angle;
+        power = sol.power;
+        for (let attempt = 0; attempt < 8; attempt++) {
+          angle = clamp(sol.angle + rand(-9, 9), 5, 88);
+          power = clamp(Math.round(sol.power + dir * rand(10, 26)), 8, 100);
+          if (this.boxes.every((bx) => !simShot(p.x, p.y, facing, angle, power, this.wind, bx.x, bx.y, BOX_HIT_R).hit)) break;
+        }
+      }
+      p.angle = angle;
       this.fireCollect(p, p.angle, power);
       return;
     }
@@ -1132,7 +1195,7 @@ export class RoyaleEngine {
 
   private botFinishAnswer(p: RPlayer) {
     const st = this.stats[p.idx];
-    const correct = Math.random() < BOT_CORRECT_RATE[p.botAnswerTier];
+    const correct = Math.random() < BOT_LEVELS[this.botLevel].correct;
     st.opened++;
     st.answerMsTotal += Math.max(0, p.botAnswerAt - p.botAskedAt);
     if (correct) {
@@ -1146,6 +1209,7 @@ export class RoyaleEngine {
       this.addFloater(p.x, p.y - 90, '✘ Trả lời sai', '#f87171', 15, 70);
       p.lastAction = '✘ Sai';
     }
+    this.react(p, correct);
     p.status = 'idle';
     this.settleBox(p, correct);
     this.checkCollectEnd();
@@ -1214,7 +1278,7 @@ export class RoyaleEngine {
     this.burst(box.x, box.y, t.color, ['🎁', '✨', '⭐'], 22, 7);
     this.ring(box.x, box.y, 6, 70, t.color, 28);
     this.kick(5);
-    this.sfx('box');
+    this.sfx('boxhit');
     p.charging = false;
     p.charge = 0;
     p.status = 'answering';
@@ -1375,8 +1439,7 @@ export class RoyaleEngine {
       return;
     }
     const w = cands[randInt(0, cands.length - 1)];
-    const hard = Math.random() < 0.5;
-    const correct = Math.random() < (hard ? 0.4 : 0.6);
+    const correct = Math.random() < BOT_LEVELS[this.botLevel].correct;
     const info = WEAPON_BY_ID[w.weaponId];
     if (correct) {
       this.stats[bot.idx].correct++;
@@ -1593,6 +1656,7 @@ export class RoyaleEngine {
     bt.turn = turn;
     bt.step = 'charge';
     bt.stepT = 0;
+    this.sfx('chargeup');
     const el = ELEMENTS[ow.element];
     const notes: string[] = [];
     if (turn.sinh) notes.push(`${ELEMENTS[prev!.element].name} sinh ${el.name}: +${Math.round(turn.sinhBonus * 100)}%`);
@@ -1742,7 +1806,7 @@ export class RoyaleEngine {
     const sh = this.players[t.shooter];
     const tg = this.players[t.target];
     t.ended++;
-    this.sfx(w.blast >= 85 ? 'bigexplode' : 'explode');
+    this.sfx(hit ? 'hitplayer' : w.blast >= 85 ? 'bigexplode' : 'explode');
     const ex = s.x;
     const ey = Math.min(s.y, terrainHeight(s.x));
     this.burst(ex, ey, w.color, w.fx, 20 + Math.round(w.blast / 6), 7);
@@ -2034,6 +2098,7 @@ export class RoyaleEngine {
         upgradesLeft: p.upgradesLeft,
         lastAction: p.lastAction,
         speech: p.speech,
+        reaction: p.reaction,
         strikes: p.strikes,
         alert: p.idx === seat ? p.alert : undefined,
         selectedBoxId: p.idx === seat ? p.selectedBoxId : null,
@@ -2047,7 +2112,8 @@ export class RoyaleEngine {
       time: this.time,
       phase: this.phase,
       phaseT: this.phaseT,
-      collectLeft: this.collectLeft,
+      teamLeft: [this.teamLeft[0], this.teamLeft[1]],
+      collectLeft: Math.max(this.teamLeft[0], this.teamLeft[1]),
       arrangeLeft: this.arrangeLeft,
       wind: this.wind,
       players: this.players.map(pub),
@@ -2101,7 +2167,7 @@ export class RoyaleEngine {
     this.time = s.time;
     this.phase = s.phase;
     this.phaseT = s.phaseT;
-    this.collectLeft = s.collectLeft;
+    this.teamLeft = Array.isArray(s.teamLeft) && s.teamLeft.length === 2 ? [s.teamLeft[0], s.teamLeft[1]] : [s.collectLeft, s.collectLeft];
     this.arrangeLeft = s.arrangeLeft;
     this.wind = s.wind;
     this.boxes = s.boxes;
@@ -2118,6 +2184,7 @@ export class RoyaleEngine {
       const mine = i === mySeat;
       const local = mine ? { angle: p.angle, charge: p.charge, dir: p.chargeDir } : null;
       Object.assign(p, pp);
+      p.reaction = pp.reaction;
       if (local) {
         // my own aim is predicted locally: smooth, and it is exactly what I see when I fire
         if (this.canAim(i)) {

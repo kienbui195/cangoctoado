@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { RoyaleEngine, RPlayer } from '../game/royaleEngine';
+import { REACTION_MS, RoyaleEngine, RPlayer } from '../game/royaleEngine';
 import { ELEMENTS, TIERS, WEAPON_BY_ID } from '../data/royaleWeapons';
 import { createTerrainCanvas, WORLD_H, WORLD_W } from '../utils/terrain';
 import { soundManager } from '../utils/audio';
@@ -69,8 +69,23 @@ function drain(e: RoyaleEngine, st: { seen: number }) {
       case 'shoot':
         soundManager.playShoot();
         break;
-      case 'box':
-        soundManager.playCrit();
+      case 'boxhit':
+        soundManager.playBoxHit();
+        break;
+      case 'correct':
+        soundManager.playCheer();
+        break;
+      case 'wrong':
+        soundManager.playWrong();
+        break;
+      case 'chargeup':
+        soundManager.playChargeUp();
+        break;
+      case 'chargestop':
+        soundManager.stopChargeUp();
+        break;
+      case 'hitplayer':
+        soundManager.playHitPlayer();
         break;
       case 'explode':
         soundManager.playExplode(false);
@@ -82,6 +97,7 @@ function drain(e: RoyaleEngine, st: { seen: number }) {
         soundManager.playHeal();
         break;
       case 'power':
+        soundManager.stopChargeUp(0.08); // the shell is flying: the charge-up sound ends
         soundManager.playPowShoot();
         break;
       case 'turn':
@@ -98,6 +114,20 @@ function drain(e: RoyaleEngine, st: { seen: number }) {
 }
 
 // ---------------------------------------------------------------- drawing
+// Cheer / sad emoji floating above a player after a box question: lets the players waiting for their turn see what is happening.
+function drawReaction(ctx: CanvasRenderingContext2D, e: RoyaleEngine, p: RPlayer) {
+  const r = p.reaction;
+  if (!r || e.time >= r.until) return;
+  const k = Math.max(0, Math.min(1, (r.until - e.time) / REACTION_MS)); // 1 -> 0
+  const rise = (1 - k) * 26;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, k * 3);
+  ctx.font = `${44 + (1 - k) * 8}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(r.emoji, p.x, p.y - 112 - rise);
+  ctx.restore();
+}
 function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanvasElement, now: number) {
   ctx.save();
   if (e.shake > 0.3) ctx.translate((Math.random() - 0.5) * e.shake, (Math.random() - 0.5) * e.shake);
@@ -150,7 +180,10 @@ function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanva
   }
 
   // players
-  e.players.forEach((p) => drawPlayer(ctx, e, p, now));
+  e.players.forEach((p) => {
+    drawPlayer(ctx, e, p, now);
+    drawReaction(ctx, e, p);
+  });
 
   // charge-up aura / giant weapon icon
   drawChargeAura(ctx, e, now);

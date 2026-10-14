@@ -26,6 +26,7 @@ import { InventoryModal } from './components/InventoryModal';
 import { FormulaCalculatorModal } from './components/FormulaCalculatorModal';
 import { LobbyScreen } from './components/LobbyScreen';
 import { RoyaleGame } from './components/RoyaleGame';
+import type { BotLevel } from './game/royaleEngine';
 import { OnlineApp } from './online/OnlineApp';
 import {
   Backpack,
@@ -47,6 +48,7 @@ export default function App() {
   const [inventoryOwner, setInventoryOwner] = useState<'p1' | 'p2'>('p1');
   const [gameMode, setGameMode] = useState<GameMode>('pvp');
   const [screen, setScreen] = useState<'lobby' | 'royale' | 'online' | 'classic'>('lobby');
+  const [botLevel, setBotLevel] = useState<BotLevel>('medium');
 
   // Modals
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
@@ -688,13 +690,13 @@ export default function App() {
   };
 
   if (screen === 'lobby') {
-    return <LobbyScreen onStart={() => setScreen('royale')} onOnline={() => setScreen('online')} onClassic={() => setScreen('classic')} />;
+    return <LobbyScreen onStart={(lv) => { setBotLevel(lv); setScreen('royale'); }} onOnline={() => setScreen('online')} onClassic={() => setScreen('classic')} />;
   }
   if (screen === 'online') {
     return <OnlineApp onBack={() => setScreen('lobby')} />;
   }
   if (screen === 'royale') {
-    return <RoyaleGame onExit={() => setScreen('lobby')} />;
+    return <RoyaleGame level={botLevel} onExit={() => setScreen('lobby')} />;
   }
 
   return (

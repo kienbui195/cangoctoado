@@ -121,14 +121,14 @@ const run = (e: RoyaleEngine, ms: number) => {
   ok(e.cturn!.seat === off, 'aim timeout passes the turn');
   // hit a box: question for that seat, 20s limit, wrong -> same tier elsewhere
   const box = e.boxes.find((b) => b.tier === 'blue') ?? e.boxes[0];
-  const t0 = e.collectLeft;
   const bx = { x: box.x, y: box.y, tier: box.tier };
   run(e, 800);
   (e as any).hitBox(e.players[e.cturn!.seat], box);
   const q = e.cturn!.seat;
+  const tq = e.teamLeft.slice();
   ok(e.cturn!.step === 'quiz' && !!e.quizzes[q], 'hit opens a question for the shooter');
   run(e, 5000);
-  ok(e.collectLeft < t0 - 4900, 'the clock keeps running during the question');
+  ok(Math.abs(e.teamLeft[teamOf(q)] - tq[teamOf(q)]) < 20 && e.teamLeft[1 - teamOf(q)] === tq[1 - teamOf(q)], 'the team clock stands still during the question');
   run(e, QUIZ_LIMIT_MS - 5000 + 500);
   ok(e.quizzes[q] === null || !!e.quizzes[q]!.result, 'unanswered question timed out after 20s');
   run(e, 3000);

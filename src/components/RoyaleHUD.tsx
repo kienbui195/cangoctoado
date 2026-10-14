@@ -102,6 +102,7 @@ export const RoyaleHUD: React.FC<Props> = ({ engine: e, view }) => {
 
       {/* Whose turn (collection is turn-based) */}
       {inCollect && e.cturn && <TurnPill e={e} />}
+      {inCollect && <TeamClocks e={e} />}
 
       {/* Round indicator in battle */}
       {e.phase === 'battle' && e.battle && (
@@ -136,6 +137,36 @@ export const RoyaleHUD: React.FC<Props> = ({ engine: e, view }) => {
           )}
         </motion.div>
       )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------- team clocks
+// One clock per team, like a chess clock: it runs only while a seat of that team is aiming (not holding Space, no shell in the air, no question).
+const TEAMS = [0, 1] as const;
+const TeamClocks: React.FC<{ e: RoyaleEngine }> = ({ e }) => {
+  const ct = e.cturn;
+  const running = ct && ct.step === 'aim' && !e.players[ct.seat]?.charging ? teamOf(ct.seat) : -1;
+  return (
+    <div className="absolute top-[118px] left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none">
+      {TEAMS.map((t) => {
+        const ms = e.teamLeft?.[t]; // may be missing when the server runs an older build: then show --:--
+        const known = typeof ms === 'number' && Number.isFinite(ms);
+        const out = known && ms <= 0;
+        const on = running === t;
+        const tone = out
+          ? 'bg-rose-950/90 text-rose-200 border-rose-500'
+          : on
+            ? 'bg-amber-400 text-slate-950 border-amber-100 shadow-[0_0_18px_rgba(251,191,36,.6)]'
+            : 'bg-slate-950/85 text-slate-400 border-slate-600';
+        return (
+          <div key={t} className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 font-black font-['Fredoka'] text-sm ${tone}`}>
+            <span>Đội {TEAM_LABEL[t]}</span>
+            <span className="tabular-nums">{out ? 'Hết giờ' : known ? mmss(ms) : '--:--'}</span>
+            {!out && <span className="text-[11px] font-bold">{on ? '▶ đang chạy' : '❄ đóng băng'}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -215,14 +246,14 @@ const CollectTitle: React.FC<{ engine: RoyaleEngine }> = ({ engine: e }) => {
         <>
           <div className="text-center">THU THẬP VŨ KHÍ</div>
           <div className="text-center not-italic" style={{ fontSize: 28, color: '#fde68a', textShadow: '0 2px 0 #92400e, 0 0 12px #f59e0b' }}>
-            Thời gian thu thập: 5 phút
+            Thời gian mỗi đội: {Math.round(Math.max(e.teamLeft[0], e.teamLeft[1]) / 60000)} phút
           </div>
           <div className="text-center not-italic" style={{ fontSize: 18, fontWeight: 600, color: '#e2e8f0', textShadow: '0 2px 6px rgba(0,0,0,.9)', marginTop: 6 }}>
             Trong giai đoạn này, người chơi không thể gây sát thương cho nhau.
           </div>
         </>
       ) : (
-        <span>Thu thập vũ khí còn {mmss(e.collectLeft)}s</span>
+        <span>Thu thập vũ khí</span>
       )}
     </motion.div>
   );
