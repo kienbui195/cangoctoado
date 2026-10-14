@@ -37,14 +37,18 @@ interface Client {
   starts: any[];
   rooms: any[];
   events: string[];
+  fx: any[];
 }
 
 function connect(id: number, name: string, token = tokenOf(id, name)): Promise<Client> {
   return new Promise((resolve, reject) => {
     const s = io(url, { auth: { token }, transports: ['websocket'], reconnection: false });
     sockets.push(s);
-    const c: Client = { s, state: null, starts: [], rooms: [], events: [] };
-    s.on('game:state', (p) => (c.state = p.s));
+    const c: Client = { s, state: null, starts: [], rooms: [], events: [], fx: [] };
+    s.on('game:state', (p) => {
+      c.state = p.s;
+      for (const f of p.fx ?? []) c.fx.push(f);
+    });
     s.on('game:start', (p) => c.starts.push(p));
     s.on('room:update', (v) => c.rooms.push(v));
     for (const ev of ['room:left', 'room:closed', 'auth:error', 'session:replaced']) s.on(ev, () => c.events.push(ev));
@@ -120,6 +124,9 @@ test('two players: create/join/start, play to the end, compare stats, vote, leav
   const right = eng.quizzes[0]!.question.correctIndex;
   assert.equal((await call(a, 'quiz:answer', { choice: right })).ok, true);
   await until(() => a.state.quiz?.result?.correct === true, 3000, 'correct result');
+  // AC-09.3: the opponent also sees the cheer emoji above the answering player
+  await until(() => ['🎉', '🥳'].includes(b.state.players[0].reaction?.emoji), 3000, 'B sees the cheer emoji');
+  assert.equal(b.state.teamLeft.length, 2, 'the team clocks are part of the snapshot (AC-01.13)');
   await until(() => !a.state.quiz, 8000, 'quiz auto-closed');
 
   // run on: nobody collects more, collection times out, both get ready, battle, result
@@ -133,6 +140,14 @@ test('two players: create/join/start, play to the end, compare stats, vote, leav
   assert.equal(a.state.stats[0].opened, 1);
   assert.equal(a.state.stats[0].correct, 1);
   assert.deepEqual(a.state.result, b.state.result);
+  // BR11 / AC-06.4 / AC-07.5 / AC-08.5: the whole room hears the same sounds
+  const names = (c: Client) => c.fx.filter((f) => f[0] === 's').map((f) => f[1]);
+  for (const c of [a, b]) {
+    const n = names(c);
+    assert.ok(n.includes('boxhit') && n.includes('correct'), 'both players hear the box collision and the cheer');
+    assert.ok(n.includes('chargeup') && n.includes('power'), 'both teams hear the charge-up');
+  }
+  assert.deepEqual(names(a), names(b), 'both clients receive the same sound events');
   await until(() => a.rooms.at(-1)?.status === 'result', 3000, 'room status result');
 
   // AC9: both vote again -> new match
