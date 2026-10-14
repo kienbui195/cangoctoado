@@ -137,6 +137,35 @@ block('team out of time', () => {
   ok(e.phase === 'arrange' && e.arrangeLeft <= 180000 && e.arrangeLeft > 170000, 'AC-03.1: arrange starts with 180000 ms');
 });
 
+block('exhausted team is announced once (Q11 = A)', () => {
+  const e = humans(4);
+  const on = firstTurn(e);
+  const t = teamOf(on);
+  let shown = 0;
+  const orig = (e as any).addFloater.bind(e);
+  (e as any).addFloater = (x: number, y: number, text: string, ...rest: unknown[]) => {
+    if (/Hết giờ đội/.test(text)) shown++;
+    orig(x, y, text, ...rest);
+  };
+  (e as any).teamLeft[t] = 500;
+  (e as any).teamLeft[1 - t] = 400000;
+  run(e, 60000);
+  ok(shown === 1 && e.phase === 'collect', 'AC-02.1/Q11: "Hết giờ đội" is shown once, the skipped turns after it are silent');
+});
+
+block('stale reaction is cleared on the replica', () => {
+  const srv = new RoyaleEngine([prof('A'), prof('B')], { bots: [false, false], emitFx: true });
+  const rep = new RoyaleEngine([prof('A'), prof('B')], { bots: [false, false] });
+  rep.replica = true;
+  run(srv, 2500);
+  (srv as any).react(srv.players[0], true);
+  rep.applySnapshot(JSON.parse(JSON.stringify(srv.snapshot(1))), 1);
+  ok(!!(rep.players[0] as any).reaction, 'replica receives the reaction');
+  run(srv, 2500);
+  rep.applySnapshot(JSON.parse(JSON.stringify(srv.snapshot(1))), 1);
+  ok(!(rep.players[0] as any).reaction, 'AC-09.1: the reaction disappears on the replica once the server dropped it');
+});
+
 block('seven weapons end it', () => {
   const e = humans(4);
   firstTurn(e);
@@ -212,6 +241,7 @@ block('battle sounds', () => {
 });
 
 block('bot levels', () => {
+  if (process.env.SKIP_BOTS) return; // fast mode for mutation runs
   const LEVELS: [string, number, number][] = [['easy', 0.5, 0.4], ['medium', 0.7, 0.7], ['super', 0.85, 0.85]];
   for (const [lv, acc, ans] of LEVELS) {
     let shots = 0;
