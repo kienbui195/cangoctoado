@@ -221,6 +221,9 @@ export class OnlineClient {
   leaveRoom() {
     return this.call('room:leave');
   }
+  moveSeat(seat: number) {
+    return this.call('room:seat', { seat });
+  }
   startGame() {
     return this.call('room:start');
   }

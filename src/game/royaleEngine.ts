@@ -1378,12 +1378,6 @@ export class RoyaleEngine {
       if (this.players.some((p) => !p.out && Math.abs(p.x - x) < 130 && Math.abs(p.y - y) < 220)) continue;
       if (this.boxes.some((b) => Math.hypot(b.x - x, b.y - y) < 120)) continue;
       if (avoid && Math.hypot(avoid.x - x, avoid.y - y) < 260) continue; // a wrong answer moves the box somewhere else
-      // must be reachable by both shooters from where they stand now
-      const reachable = this.players.filter((p) => !p.out).every((p) => {
-        const facing: 1 | -1 = x >= p.x ? 1 : -1;
-        return solveAimsExists(p.x, p.y, facing, this.wind, x, y);
-      });
-      if (!reachable) continue;
       this.boxes.push({ id: ++this.boxId, x, y, r: BOX_RADIUS, tier, phase: Math.random() * 6 });
       return;
     }
@@ -2376,20 +2370,6 @@ export class RoyaleEngine {
     if (this.emitFx) this.fxOut(['f', x, y, text, color, size, max]);
     else this.floaters.push({ x, y, text, color, size, life: 0, max });
   }
-}
-
-/** Is there at least one hitting shot at this point? (used when placing boxes) */
-function solveAimsExists(sx: number, sy: number, facing: 1 | -1, wind: number, tx: number, ty: number): boolean {
-  for (let angle = 20; angle <= 86; angle += 2) {
-    let lastErr = Infinity;
-    for (let p = 10; p <= 100; p += 2) {
-      const r = simShot(sx, sy, facing, angle, p, wind, tx, ty, BOX_HIT_R);
-      if (r.hit) return true;
-      lastErr = r.err;
-    }
-    void lastErr;
-  }
-  return false;
 }
 
 /** Brute-force the lineup: most "tương sinh" links in the battle slots first, then highest total power. */

@@ -355,5 +355,26 @@ const run = (e: RoyaleEngine, ms: number) => {
   ok(bad, 'an odd / single seat count is refused');
 }
 
+// 2v2: a respawned box always appears, and in many places (players move freely, so no aim-reachability rule: only edge / HUD margins)
+{
+  const e: any = new RoyaleEngine([prof('A'), prof('B'), prof('C'), prof('D')]);
+  [300, 1500, 700, 1100].forEach((x, i) => {
+    e.players[i].x = x;
+    e.players[i].y = 1000;
+  });
+  const xs = new Set<number>();
+  let placed = 0;
+  for (let n = 0; n < 40; n++) {
+    e.boxes.length = 0;
+    e.spawnBox('white');
+    if (e.boxes.length) {
+      placed++;
+      xs.add(Math.round(e.boxes[0].x / 100));
+    }
+  }
+  ok(placed === 40, '2v2: a box is always respawned');
+  ok(xs.size >= 8, `2v2: respawned boxes land in many places (${xs.size} x-buckets)`);
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
 process.exit(failed ? 1 : 0);

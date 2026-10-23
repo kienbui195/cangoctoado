@@ -249,6 +249,19 @@ export class RoomService {
     room.sendUpdate();
   }
 
+  /** Waiting room: move to an empty seat (its parity decides the team). */
+  moveSeat(userId: number, seat: unknown) {
+    const room = this.byUser.get(userId);
+    const m = room?.member(userId);
+    if (!room || !m) throw new RoomError('Bạn chưa ở trong phòng nào.');
+    if (room.status !== 'waiting') throw new RoomError('Chỉ đổi đội được khi chưa bắt đầu ván.');
+    if (typeof seat !== 'number' || !Number.isInteger(seat) || seat < 0 || seat >= room.seats) throw new RoomError('Ghế không hợp lệ.');
+    if (seat === m.seat) return;
+    if (room.members.some((x) => x.seat === seat)) throw new RoomError('Ghế này đã có người.');
+    m.seat = seat;
+    room.sendUpdate();
+  }
+
   start(userId: number, now = Date.now()) {
     const room = this.hostRoom(userId);
     if (room.status !== 'waiting') throw new RoomError('Ván chơi đã bắt đầu.');

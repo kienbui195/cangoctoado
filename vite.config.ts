@@ -14,8 +14,8 @@ export default defineConfig(() => {
     server: {
       // online mode: the NestJS server (server/, port 45215) answers /api and /socket.io
       proxy: {
-        '/api': 'http://127.0.0.1:45215',
-        '/socket.io': { target: 'http://127.0.0.1:45215', ws: true },
+        '/api': `http://127.0.0.1:${process.env.API_PORT ?? 45215}`,
+        '/socket.io': { target: `http://127.0.0.1:${process.env.API_PORT ?? 45215}`, ws: true },
       },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.

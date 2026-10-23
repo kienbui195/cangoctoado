@@ -317,7 +317,20 @@ const RoomScreen: React.FC<{ client: OnlineClient; room: RoomView }> = ({ client
                           </div>
                         </>
                       ) : (
-                        <span className="block py-2 text-sm text-slate-500 truncate">Ghế trống · đang chờ...</span>
+                        <button
+                          className="block w-full py-2 text-sm text-slate-400 hover:text-white truncate"
+                          disabled={busy}
+                          onClick={async () => {
+                            setError(null);
+                            setBusy(true);
+                            const r = (await client.moveSeat(slot)) as { ok: boolean; error?: string };
+                            setBusy(false);
+                            if (!r.ok) setError(r.error ?? 'Không đổi được đội.');
+                          }}
+                          title="Bấm để chuyển sang ghế này"
+                        >
+                          Ghế trống · bấm để vào đội {TEAM_LABEL[team]}
+                        </button>
                       )}
                     </div>
                   );
@@ -326,7 +339,7 @@ const RoomScreen: React.FC<{ client: OnlineClient; room: RoomView }> = ({ client
             </div>
           ))}
         </div>
-        {need > 2 && <div className="mt-2 text-center text-[11px] text-slate-500">Người vào sau được xếp vào ghế trống đầu tiên (chủ phòng ở đội A).</div>}
+        <div className="mt-2 text-center text-[11px] text-slate-500">Người vào sau được xếp vào ghế trống đầu tiên; bấm ghế trống để đổi đội.</div>
 
         <div className="mt-4 rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-sm">
           <div className="flex items-center justify-between gap-2 flex-wrap">

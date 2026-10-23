@@ -197,6 +197,22 @@ function setup4(join = 4) {
   return { svc, peers, room };
 }
 
+test('moveSeat: a player picks an empty seat to change team; taken / invalid seats and a running match are refused', () => {
+  const { svc, room } = setup4(2); // seats: 0 = A (host), 1 = B
+  svc.moveSeat(2, 3); // B -> still B, other slot
+  assert.equal(room.member(2)!.seat, 3);
+  svc.moveSeat(2, 2); // B -> A
+  assert.equal(room.view().players.find((p) => p.id === 2)!.team, 0);
+  assert.throws(() => svc.moveSeat(2, 0), /đã có người/);
+  assert.throws(() => svc.moveSeat(2, 9), /không hợp lệ/);
+  assert.throws(() => svc.moveSeat(2, 1.5), /không hợp lệ/);
+  svc.moveSeat(2, 1);
+  svc.join(user(3), new FakePeer('s3'), room.code);
+  svc.join(user(4), new FakePeer('s4'), room.code);
+  svc.start(1, 0);
+  assert.throws(() => svc.moveSeat(2, 3), /chưa bắt đầu/);
+});
+
 test('team rooms: only 1v1 and 2v2 can be created; 3v3, 4v4 and garbage are refused', () => {
   const svc = new RoomService();
   assert.throws(() => svc.create(user(1), new FakePeer('a'), Date.now(), '3v3'), /sắp có/);

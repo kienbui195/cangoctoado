@@ -131,6 +131,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     return this.run(c, null, b, (u) => this.rooms.resetCsv(u.id));
   }
 
+  @SubscribeMessage('room:seat')
+  seat(@ConnectedSocket() c: Socket, @MessageBody() b: unknown) {
+    return this.run(c, z.object({ seat: z.number().int().min(0).max(7) }), b, (u, d) => this.rooms.moveSeat(u.id, d.seat));
+  }
+
   @SubscribeMessage('room:start')
   start(@ConnectedSocket() c: Socket, @MessageBody() b: unknown) {
     return this.run(c, null, b, (u) => this.rooms.start(u.id, performance.now()));
