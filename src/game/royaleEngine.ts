@@ -1385,7 +1385,7 @@ export class RoyaleEngine {
         y = rand(BOX_TOP_MARGIN, BOX_TOP_MARGIN + 150);
       }
       if (y < BOX_TOP_MARGIN || terrainHeight(x) - y < (tier === 'white' ? 20 : 110)) continue;
-      if (this.boxes.some((b) => Math.hypot(b.x - x, b.y - y) < 120)) continue;
+      if (this.boxes.some((b) => Math.hypot(b.x - x, b.y - y) < BOX_RADIUS * 2 + 2)) continue; // touching is fine, overlapping is not
       if (avoid && Math.hypot(avoid.x - x, avoid.y - y) < 260) continue; // a wrong answer moves the box somewhere else
       this.boxes.push({ id: ++this.boxId, x, y, r: BOX_RADIUS, tier, phase: Math.random() * 6 });
       return;
