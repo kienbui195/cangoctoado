@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { calculateGunnyDistance, solvePower } from '../utils/gunnyPhysics';
 import type { ViewInfo } from './GameViewport';
 import type { PlayerEntity } from '../types/game';
@@ -11,6 +11,8 @@ interface Props {
   visible: boolean;
   isCharging: boolean;
   chargingPower: number;
+  /** smooth live value (0..100); when given, the bar is driven by requestAnimationFrame instead of React renders */
+  getCharge?: () => number;
 }
 
 // 1 Gunny segment ("khúc") = 90px of battlefield (1 screen ≈ 10 khúc)
@@ -19,7 +21,24 @@ const SEGMENT_PX = 90;
 const TOTAL_SEGMENTS = 21;
 const BANNER_BOTTOM = 52;
 
-export const GunnyRuler: React.FC<Props> = ({ view, shooter, target, windSpeed, visible, isCharging, chargingPower }) => {
+export const GunnyRuler: React.FC<Props> = ({ view, shooter, target, windSpeed, visible, isCharging, chargingPower, getCharge }) => {
+  const fillRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!isCharging || !getCharge) return;
+    let raf = 0;
+    const frame = () => {
+      const c = getCharge();
+      if (fillRef.current) fillRef.current.style.transform = `scaleX(${c / 100})`;
+      if (labelRef.current) labelRef.current.textContent = `${Math.round(c)} Lực`;
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (fillRef.current) fillRef.current.style.transform = 'scaleX(0)';
+    };
+  }, [isCharging, getCharge]);
   // Real shots go where the shooter faces; the advice only makes sense when facing the opponent
   const facing: 1 | -1 = shooter.facing;
   const facingTarget = (target.x >= shooter.x ? 1 : -1) === facing;
@@ -97,8 +116,10 @@ export const GunnyRuler: React.FC<Props> = ({ view, shooter, target, windSpeed, 
         {/* Power charge bar (bottom half) */}
         <div className="absolute inset-x-0 bottom-0 h-4 bg-slate-900/90 border-t border-slate-700">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-600 transition-all duration-75"
-            style={{ width: `${isCharging ? chargingPower : 0}%` }}
+            ref={fillRef}
+            className="h-full w-full origin-left bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-600 will-change-transform"
+            // with getCharge the rAF loop owns the transform: React keeps a constant value so a re-render never overwrites it
+            style={{ transform: `scaleX(${getCharge || !isCharging ? 0 : chargingPower / 100})` }}
           />
           {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
             <div
@@ -124,8 +145,8 @@ export const GunnyRuler: React.FC<Props> = ({ view, shooter, target, windSpeed, 
           )}
           <span className="absolute left-2 top-0 text-[9px] font-bold text-slate-300/70 leading-4 tracking-wider">LỰC BẮN</span>
           {isCharging && (
-            <span className="absolute right-1 -top-4 text-[11px] font-black text-amber-300 drop-shadow">
-              {chargingPower} Lực
+            <span ref={labelRef} className="absolute right-1 -top-4 text-[11px] font-black text-amber-300 drop-shadow">
+              {getCharge ? '0 Lực' : `${chargingPower} Lực`}
             </span>
           )}
         </div>

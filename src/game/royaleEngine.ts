@@ -657,6 +657,16 @@ export class RoyaleEngine {
     this.listeners.forEach((fn) => fn());
   }
 
+  /** Power bar value for drawing: the 60 Hz step plus the fraction of the next step already elapsed, so it glides on any refresh rate. */
+  chargeVisual(seat: Seat): number {
+    const p = this.players[seat];
+    if (!p || !p.charging) return p?.charge ?? 0;
+    let c = p.charge + (p.chargeDir * this.acc) / 28;
+    if (c > 100) c = 200 - c;
+    else if (c < 0) c = -c;
+    return clamp(c, 0, 100);
+  }
+
   // ---- public control API (every call names its seat)
   setInput(seat: Seat, inp: Partial<SeatInput>) {
     Object.assign(this.players[seat].input, inp);

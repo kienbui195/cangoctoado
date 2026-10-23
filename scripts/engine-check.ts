@@ -376,5 +376,22 @@ const run = (e: RoyaleEngine, ms: number) => {
   ok(xs.size >= 8, `2v2: respawned boxes land in many places (${xs.size} x-buckets)`);
 }
 
+// power bar drawing value glides between 60 Hz steps and bounces at 0 / 100
+{
+  const e: any = new RoyaleEngine([prof('A'), prof('B')]);
+  const p = e.players[0];
+  p.charging = true;
+  p.charge = 50;
+  p.chargeDir = 1;
+  e.acc = 0;
+  const a = e.chargeVisual(0);
+  e.acc = 8;
+  const b = e.chargeVisual(0);
+  p.charge = 99.9;
+  e.acc = 16;
+  const c = e.chargeVisual(0);
+  ok(a === 50 && b > a && b < 51 && c <= 100 && c > 99, `power bar interpolates smoothly (${a} -> ${b.toFixed(2)}, edge ${c.toFixed(2)})`);
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
 process.exit(failed ? 1 : 0);

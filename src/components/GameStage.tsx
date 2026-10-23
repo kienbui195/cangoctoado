@@ -46,17 +46,6 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
     };
   }, [engine]);
 
-  // while the power bar moves, redraw every frame (the 50 ms refresh above would make it look choppy)
-  useEffect(() => {
-    let raf = 0;
-    const frame = () => {
-      if (engine.players[engine.mySeat]?.charging) setTick((t) => (t + 1) % 1e9);
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [engine]);
-
   useEffect(() => bindGameKeys(io), [io]);
 
   // beep when the turn passes to me

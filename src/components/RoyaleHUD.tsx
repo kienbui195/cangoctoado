@@ -45,6 +45,8 @@ export const RoyaleHUD: React.FC<Props> = ({ engine: e, view }) => {
     ? ({ x: target.x, y: target.y } as unknown as PlayerEntity)
     : ({ x: p1.x + p1.facing * 400, y: p1.y } as unknown as PlayerEntity);
 
+  const getCharge = React.useCallback(() => e.chargeVisual(e.mySeat), [e]);
+
   const banner = e.banner && e.time < e.banner.until ? e.banner : null;
 
   return (
@@ -58,6 +60,7 @@ export const RoyaleHUD: React.FC<Props> = ({ engine: e, view }) => {
           visible={e.canAim(e.mySeat)}
           isCharging={p1.charging}
           chargingPower={Math.round(p1.charge)}
+          getCharge={getCharge}
         />
       )}
 
