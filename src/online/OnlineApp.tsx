@@ -128,12 +128,12 @@ const AuthScreen: React.FC<{ onAuthed: (user: OnlineUser, token: string) => void
                 Tên hiển thị
                 <input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="VD: Nguyễn Văn An" autoFocus required />
               </label>
-              <div className="text-[11px] text-slate-400 -mt-1">Hệ thống sẽ tự tạo cho bạn một username duy nhất từ tên này.</div>
+              <div className="text-[11px] text-slate-400 -mt-1">Username được tạo từ tên bỏ dấu, viết liền; nếu đã có người dùng thì thêm số thứ tự (vd nguyenvanan2).</div>
             </>
           ) : (
             <label className="grid gap-1 text-xs font-bold text-slate-300">
               Username
-              <input className={input} value={username} onChange={(e) => setUsername(e.target.value)} maxLength={40} placeholder="VD: nguyenvanan-4821" autoFocus required autoCapitalize="none" />
+              <input className={input} value={username} onChange={(e) => setUsername(e.target.value)} maxLength={40} placeholder="VD: nguyenvanan hoặc nguyenvanan2" autoFocus required autoCapitalize="none" />
             </label>
           )}
           <label className="grid gap-1 text-xs font-bold text-slate-300">

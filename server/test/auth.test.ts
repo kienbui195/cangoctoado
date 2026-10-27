@@ -33,8 +33,10 @@ test('health', async () => {
 test('AC1: same display name twice -> two different usernames; password is hashed', async () => {
   const r1 = await (await post('/api/auth/register', { displayName: 'Nguyễn Văn Đạt', password: 'matkhau123' })).json();
   const r2 = await (await post('/api/auth/register', { displayName: 'Nguyễn Văn Đạt', password: 'matkhau456' })).json();
-  assert.match(r1.user.username, /^nguyenvandat-\d{4,6}$/);
-  assert.notEqual(r1.user.username, r2.user.username);
+  assert.equal(r1.user.username, 'nguyenvandat');
+  assert.equal(r2.user.username, 'nguyenvandat2');
+  const r3 = await (await post('/api/auth/register', { displayName: 'Nguyễn Văn Đạt', password: 'matkhau789' })).json();
+  assert.equal(r3.user.username, 'nguyenvandat3');
   assert.ok(r1.token && r2.token);
   const [rows] = (await pool.query('SELECT password_hash FROM users WHERE username = ?', [r1.user.username])) as any;
   assert.match(rows[0].password_hash, /^\$argon2id\$/);
@@ -48,7 +50,7 @@ test('login: right password ok, wrong / unknown rejected with the same message',
   const me = await fetch(base + '/api/me', { headers: { Authorization: `Bearer ${(await ok.json()).token}` } });
   assert.equal((await me.json()).user.displayName, 'Lan');
   const bad = await post('/api/auth/login', { username: reg.user.username, password: 'wrong!' });
-  const none = await post('/api/auth/login', { username: 'khongco-0000', password: 'abcdef' });
+  const none = await post('/api/auth/login', { username: 'khongco', password: 'abcdef' });
   assert.equal(bad.status, 401);
   assert.equal(none.status, 401);
   assert.equal((await bad.json()).message, (await none.json()).message);

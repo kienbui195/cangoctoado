@@ -73,9 +73,7 @@ export class AuthService {
     const hash = await argon2.hash(password, ARGON);
     const base = slugify(displayName);
     for (let attempt = 0; attempt < 12; attempt++) {
-      const digits = attempt < 6 ? 4 : 6;
-      const suffix = String(Math.floor(Math.random() * 10 ** digits)).padStart(digits, '0');
-      const username = `${base}-${suffix}`;
+      const username = await this.nextUsername(base);
       try {
         const [res] = await this.pool.execute<ResultSetHeader>(
           'INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)',
@@ -84,11 +82,25 @@ export class AuthService {
         const user = { id: Number(res.insertId), username, displayName };
         return { user, token: this.sign(user) };
       } catch (e) {
-        if ((e as { code?: string }).code === 'ER_DUP_ENTRY') continue;
+        if ((e as { code?: string }).code === 'ER_DUP_ENTRY') continue; // someone registered the same name a moment ago: look again
         throw e;
       }
     }
     throw new AuthError('Không tạo được username, thử lại nhé.', 503);
+  }
+
+  /** `base` when it is free, otherwise `base2`, `base3`, ... (the counter only goes up, so a number is never handed out twice in a row). */
+  private async nextUsername(base: string): Promise<string> {
+    // base is [a-z0-9] only (see slugify), so it is safe inside the pattern
+    const [rows] = await this.pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE username REGEXP ?', [`^${base}[0-9]*$`]);
+    const names = rows.map((r) => String(r.username));
+    if (!names.includes(base)) return base;
+    let last = 1;
+    for (const n of names) {
+      const k = Number(n.slice(base.length) || 1);
+      if (k > last) last = k;
+    }
+    return `${base}${last + 1}`;
   }
 
   async login(usernameRaw: unknown, passwordRaw: unknown): Promise<{ user: AuthUser; token: string }> {
