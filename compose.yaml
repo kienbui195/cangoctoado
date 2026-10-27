@@ -1,0 +1,60 @@
+# Chạy trên VPS (không chạy ở laptop): cần mạng Docker `appnet` và các file bí mật trong /srv/secrets
+# (cangoctoado.db.env từ `vps db-create cangoctoado`, cangoctoado.app.env có JWT_SECRET, cangoctoado.admin.env có ADMIN_API_TOKEN).
+# Deploy: git push origin main rồi `vps release cangoctoado`.
+name: cangoctoado
+services:
+  cangoctoado-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: cangoctoado-api:latest
+    container_name: cangoctoado-api
+    restart: unless-stopped
+    env_file:
+      - /srv/secrets/cangoctoado.db.env
+      - /srv/secrets/cangoctoado.app.env
+      - /srv/secrets/cangoctoado.admin.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      NODE_ENV: production
+      # FE và BE cùng một domain (Caddy tách /api, /socket.io sang đây)
+      CORS_ORIGINS: "https://cangoctoado.baodom.xyz"
+    # Caddy chạy trên máy chủ nên cần một cổng chỉ nghe ở 127.0.0.1.
+    ports:
+      - "127.0.0.1:3103:3000"
+    networks: [appnet]
+    mem_limit: 256m
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  cangoctoado-web:
+    build: .
+    image: cangoctoado-web:latest
+    container_name: cangoctoado-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3104:80"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    tmpfs: [/tmp]
+    networks: [appnet]
+    mem_limit: 64m
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+volumes:
+  caddy_data:
+  caddy_config:
+networks:
+  appnet:
+    external: true

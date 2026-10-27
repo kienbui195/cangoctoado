@@ -2,14 +2,14 @@ import 'reflect-metadata';
 import { Body, Controller, Get, Headers, HttpException, Inject, Module, Post, Req } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { Pool } from 'mysql2/promise';
+import { AdminApiController } from './admin';
 import { AuthError, AuthService } from './auth';
 import { assertConfig, config } from './config';
-import { makePool, migrate } from './db';
+import { POOL, makePool, migrate } from './db';
 import { GameGateway, originAllowed } from './gateway';
 import { RateLimiter } from './rateLimit';
 import { RoomService } from './rooms';
 
-const POOL = 'DB_POOL';
 const authLimit = new RateLimiter(20, 60_000); // per IP: register + login attempts per minute
 
 const ipOf = (req: { headers: Record<string, string | string[] | undefined>; ip?: string }) =>
@@ -64,7 +64,7 @@ export async function createApp(opts: { pool?: Pool; migrate?: boolean } = {}) {
   if (opts.migrate !== false) await migrate(p);
 
   @Module({
-    controllers: [AppController],
+    controllers: [AppController, AdminApiController],
     providers: [
       { provide: POOL, useValue: p },
       { provide: AuthService, useValue: new AuthService(p) },

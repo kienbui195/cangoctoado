@@ -1,6 +1,8 @@
 import { createPool, Pool } from 'mysql2/promise';
 import { config } from './config';
 
+export const POOL = 'DB_POOL';
+
 export function makePool(): Pool {
   return createPool({
     host: config.db.host,

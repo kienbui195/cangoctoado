@@ -3,3 +3,4 @@ process.env.JWT_SECRET = 'integration-test-secret-integration-test-secret';
 process.env.GAME_SPEED = '40';
 process.env.PORT = '0';
 process.env.CORS_ORIGINS = 'http://localhost';
+process.env.ADMIN_API_TOKEN = 'admin-test-token-admin-test-token-admin-test-token';
