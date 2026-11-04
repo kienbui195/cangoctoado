@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { DoorOpen, Volume2, VolumeX } from 'lucide-react';
 import { GameViewport, minimapTopFor, useShortScreen } from './GameViewport';
 import { RoyaleCanvas } from './RoyaleCanvas';
-import { RoyaleHUD } from './RoyaleHUD';
+import { RoyaleHUD, type PanelsOpen } from './RoyaleHUD';
 import { QuizModal } from './QuizModal';
 import { ArrangePanel } from './ArrangePanel';
 import { ioPad, PadToggle, VirtualPad, useVirtualPadSetting } from './VirtualPad';
@@ -38,6 +38,10 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
   const [muted, setMuted] = useState(!soundManager.enabled);
   const [padOn, setPadOn] = useVirtualPadSetting();
   const short = useShortScreen();
+  // weapon panels start folded on a phone, or whenever the virtual pad is on (they share the bottom corners)
+  const [panels, setPanels] = useState<PanelsOpen | null>(null);
+  const panelsOpen = panels ?? { mine: !short && !padOn, foe: !short && !padOn };
+  const togglePanels = (side: keyof PanelsOpen) => setPanels({ ...panelsOpen, [side]: !panelsOpen[side] });
   const pad = useMemo(() => ioPad(io), [io]);
 
   // HUD refresh (the canvas runs on its own rAF loop)
@@ -76,11 +80,12 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
         world={<RoyaleCanvas engine={engine} />}
         overlay={(view) => (
           <>
-            <RoyaleHUD engine={engine} view={view} />
+            <RoyaleHUD engine={engine} view={view} panelsOpen={panelsOpen} togglePanels={togglePanels} />
             {renderStatus?.()}
             {engine.phase === 'arrange' && !engine.players[engine.mySeat].out && <ArrangePanel engine={engine} io={io} />}
-            {padOn && engine.phase === 'collect' && !engine.quiz && !engine.players[engine.mySeat].out && (
-              <VirtualPad control={pad} active={engine.canAim(engine.mySeat)} charging={engine.players[engine.mySeat].charging} insetLeft={132} insetRight={184} />
+            {/* the pad hides while a weapon panel is open, so both can use the edges of the screen */}
+            {padOn && !panelsOpen.mine && !panelsOpen.foe && engine.phase === 'collect' && !engine.quiz && !engine.players[engine.mySeat].out && (
+              <VirtualPad control={pad} active={engine.canAim(engine.mySeat)} charging={engine.players[engine.mySeat].charging} insetLeft={12} insetRight={52} />
             )}
             {engine.quiz && <QuizModal engine={engine} io={io} />}
             {engine.phase === 'result' && engine.result && renderResult()}

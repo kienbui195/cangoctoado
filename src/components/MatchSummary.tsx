@@ -24,7 +24,7 @@ const ROWS: Row[] = [
     label: 'Vũ khí thu thập được',
     value: (s) => (
       <span>
-        <b>{s.collected.white + s.collected.blue + s.collected.red}</b> <span className="text-slate-400 text-xs">(VIP {s.collected.white} · WOW {s.collected.blue} · LEGEND {s.collected.red})</span>
+        <b>{s.collected.white + s.collected.blue + s.collected.red}</b> <span className="text-slate-400 text-xs short:text-[9px] short:block whitespace-nowrap">(VIP {s.collected.white} · WOW {s.collected.blue} · LEGEND {s.collected.red})</span>
       </span>
     ),
     num: (s) => s.collected.white + s.collected.blue + s.collected.red,
@@ -75,11 +75,13 @@ export const MatchSummary: React.FC<{ engine: RoyaleEngine; children: React.Reac
   const title = r.winner === null ? 'HÒA NHAU!' : r.winner === teamOf(me) ? 'BẠN CHIẾN THẮNG!' : 'BẠN THUA RỒI!';
   const hp = (seat: number): Hp => ({ hp: e.players[seat].hp, max: e.players[seat].maxHp });
   return (
-    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 short:p-2 overflow-y-auto">
-      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-7 short:p-3 rounded-3xl short:rounded-2xl text-center max-w-2xl w-full shadow-2xl shadow-amber-500/20 my-auto">
-        <div className="text-5xl short:text-3xl mb-1">{r.winner === null ? '🤝' : r.winner === teamOf(me) ? '🏆' : '💔'}</div>
-        <h3 className="text-3xl font-black text-amber-400 font-['Fredoka'] mb-1">{title}</h3>
-        <p className="text-slate-300 text-sm mb-4">
+    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex justify-center p-4 short:p-2 overflow-y-auto overscroll-contain">
+      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-7 short:px-3 short:py-2 rounded-3xl short:rounded-2xl text-center max-w-2xl short:max-w-[640px] w-full shadow-2xl shadow-amber-500/20 my-auto">
+        <div className="short:flex short:items-center short:justify-center short:gap-2">
+        <div className="text-5xl short:text-2xl mb-1 short:mb-0">{r.winner === null ? '🤝' : r.winner === teamOf(me) ? '🏆' : '💔'}</div>
+        <h3 className="text-3xl short:text-xl font-black text-amber-400 font-['Fredoka'] mb-1 short:mb-0">{title}</h3>
+        </div>
+        <p className="text-slate-300 text-sm short:text-xs mb-4 short:mb-2">
           {r.winner !== null ? (
             <>
               <b className="text-white">{e.players[r.winner].name}</b> {REASON[r.reason]}.
@@ -89,11 +91,11 @@ export const MatchSummary: React.FC<{ engine: RoyaleEngine; children: React.Reac
           )}
         </p>
 
-        <div className="rounded-2xl border border-slate-700 overflow-hidden text-left mb-5">
+        <div className="rounded-2xl short:rounded-xl border border-slate-700 overflow-hidden text-left mb-5 short:mb-2">
           <div className="grid grid-cols-[1fr_1.4fr_1fr] bg-slate-800 text-xs font-black">
-            <div className="px-3 py-2 text-amber-300 truncate">{e.players[me].name} (bạn)</div>
-            <div className="px-3 py-2 text-center text-slate-400">SO SÁNH</div>
-            <div className="px-3 py-2 text-cyan-300 text-right truncate">{e.players[foe].name}</div>
+            <div className="px-3 py-2 short:py-1 text-amber-300 truncate">{e.players[me].name} (bạn)</div>
+            <div className="px-3 py-2 short:py-1 text-center text-slate-400">SO SÁNH</div>
+            <div className="px-3 py-2 short:py-1 text-cyan-300 text-right truncate">{e.players[foe].name}</div>
           </div>
           {ROWS.map((row) => {
             const a = row.num?.(e.stats[me], hp(me)) ?? 0;
@@ -101,10 +103,10 @@ export const MatchSummary: React.FC<{ engine: RoyaleEngine; children: React.Reac
             const dir = row.better ?? 0;
             const win = dir !== 0 && a !== b ? (dir * (a - b) > 0 ? 'me' : 'foe') : null;
             return (
-              <div key={row.label} className="grid grid-cols-[1fr_1.4fr_1fr] border-t border-slate-800 text-sm items-center">
-                <div className={`px-3 py-1.5 font-bold ${win === 'me' ? 'text-emerald-300' : 'text-slate-100'}`}>{row.value(e.stats[me], hp(me))}</div>
-                <div className="px-2 py-1.5 text-center text-[11px] text-slate-400 leading-tight">{row.label}</div>
-                <div className={`px-3 py-1.5 font-bold text-right ${win === 'foe' ? 'text-emerald-300' : 'text-slate-100'}`}>{row.value(e.stats[foe], hp(foe))}</div>
+              <div key={row.label} className="grid grid-cols-[1fr_1.4fr_1fr] border-t border-slate-800 text-sm short:text-xs items-center">
+                <div className={`px-3 py-1.5 short:py-0.5 font-bold ${win === 'me' ? 'text-emerald-300' : 'text-slate-100'}`}>{row.value(e.stats[me], hp(me))}</div>
+                <div className="px-2 py-1.5 short:py-0.5 text-center text-[11px] short:text-[10px] text-slate-400 leading-tight">{row.label}</div>
+                <div className={`px-3 py-1.5 short:py-0.5 font-bold text-right ${win === 'foe' ? 'text-emerald-300' : 'text-slate-100'}`}>{row.value(e.stats[foe], hp(foe))}</div>
               </div>
             );
           })}
@@ -129,11 +131,13 @@ const TeamSummary: React.FC<{ engine: RoyaleEngine; children: React.ReactNode }>
   const bg = (t: Team) => (t === 0 ? 'bg-amber-950/40' : 'bg-cyan-950/40');
 
   return (
-    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 short:p-2 overflow-y-auto">
-      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-6 short:p-3 rounded-3xl short:rounded-2xl text-center max-w-4xl w-full shadow-2xl shadow-amber-500/20 my-auto">
-        <div className="text-5xl short:text-3xl mb-1">{r.winner === null ? '🤝' : r.winner === myTeam ? '🏆' : '💔'}</div>
-        <h3 className="text-3xl font-black text-amber-400 font-['Fredoka'] mb-1">{title}</h3>
-        <p className="text-slate-300 text-sm mb-4">
+    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex justify-center p-4 short:p-2 overflow-y-auto overscroll-contain">
+      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-6 short:px-3 short:py-2 rounded-3xl short:rounded-2xl text-center max-w-4xl w-full shadow-2xl shadow-amber-500/20 my-auto">
+        <div className="short:flex short:items-center short:justify-center short:gap-2">
+        <div className="text-5xl short:text-2xl mb-1 short:mb-0">{r.winner === null ? '🤝' : r.winner === myTeam ? '🏆' : '💔'}</div>
+        <h3 className="text-3xl short:text-xl font-black text-amber-400 font-['Fredoka'] mb-1 short:mb-0">{title}</h3>
+        </div>
+        <p className="text-slate-300 text-sm short:text-xs mb-4 short:mb-2">
           {r.winner !== null ? (
             <>
               <b className="text-white">Đội {TEAM_LABEL[r.winner]}</b> ({members(r.winner).map((p) => p.name).join(', ')}) {REASON_TEAM[r.reason]}.
@@ -143,7 +147,7 @@ const TeamSummary: React.FC<{ engine: RoyaleEngine; children: React.ReactNode }>
           )}
         </p>
 
-        <div className="rounded-2xl border border-slate-700 overflow-x-auto text-left mb-5">
+        <div className="rounded-2xl short:rounded-xl border border-slate-700 overflow-x-auto text-left mb-5 short:mb-2">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-slate-800 text-xs font-black">
@@ -170,15 +174,15 @@ const TeamSummary: React.FC<{ engine: RoyaleEngine; children: React.ReactNode }>
                 const winTeam = dir !== 0 && tv[0] !== tv[1] ? (dir * (tv[0] - tv[1]) > 0 ? 0 : 1) : null;
                 return (
                   <tr key={row.label} className="border-t border-slate-800">
-                    <td className="px-3 py-1.5 text-[11px] text-slate-400 leading-tight">{row.label}</td>
+                    <td className="px-3 py-1.5 short:py-0.5 text-[11px] text-slate-400 leading-tight">{row.label}</td>
                     {teams.map((t) => (
                       <React.Fragment key={t}>
                         {members(t).map((p) => (
-                          <td key={p.idx} className="px-2 py-1.5 text-center font-bold text-slate-100">
+                          <td key={p.idx} className="px-2 py-1.5 short:py-0.5 text-center font-bold text-slate-100">
                             {row.value(e.stats[p.idx], hpOf(p))}
                           </td>
                         ))}
-                        <td className={`px-2 py-1.5 text-center font-black border-l border-slate-600 ${winTeam === t ? 'text-emerald-300' : 'text-slate-100'}`}>
+                        <td className={`px-2 py-1.5 short:py-0.5 text-center font-black border-l border-slate-600 ${winTeam === t ? 'text-emerald-300' : 'text-slate-100'}`}>
                           {row.value(totals[t], hpOfTeam(t))}
                         </td>
                       </React.Fragment>

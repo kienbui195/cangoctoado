@@ -28,9 +28,9 @@ const run = (e: RoyaleEngine, ms: number) => {
     const e = new RoyaleEngine([prof('A'), prof('B')]);
     const c = { white: 0, blue: 0, red: 0 } as any;
     e.boxes.forEach((b) => c[b.tier]++);
-    if (c.red < 1 || c.red > 2 || c.blue < 1 || c.blue > 2 || c.white + c.blue + c.red < 9) okBoxes = false;
+    if (c.red < 2 || c.red > 3 || c.blue < 3 || c.blue > 4 || c.white + c.blue + c.red !== 10) okBoxes = false;
   }
-  ok(okBoxes, 'map starts with 1-2 red, 1-2 blue, rest white');
+  ok(okBoxes, 'map starts with 2-3 red, 3-4 blue, rest white');
   const e = new RoyaleEngine([prof('A'), prof('B')], { bots: [true, true] });
   run(e, 2500);
   const targets = JSON.stringify((e as any).boxTarget);
@@ -44,7 +44,7 @@ const run = (e: RoyaleEngine, ms: number) => {
   }
   const c2 = { white: 0, blue: 0, red: 0 } as any;
   e.boxes.forEach((b) => c2[b.tier]++);
-  ok(JSON.stringify((e as any).boxTarget) === targets && c2.red <= 2 && c2.blue <= 2, 'respawn keeps red<=2, blue<=2');
+  ok(JSON.stringify((e as any).boxTarget) === targets && c2.red <= 3 && c2.blue <= 4, 'respawn keeps red<=3, blue<=4');
 }
 
 // 2b. holding the fire key more than 20s: 1st warning (turn lost), 2nd = lost match + kick

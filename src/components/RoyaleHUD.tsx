@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { Wind } from 'lucide-react';
 import { RoyaleEngine, RPlayer, MAX_LINEUP, WEAPONS_TO_WIN, TEAM_LABEL, teamOf } from '../game/royaleEngine';
@@ -8,9 +8,17 @@ import { ElementBadge } from './WeaponBits';
 import { CARD_H, CARD_H_SHORT, useShortScreen, type ViewInfo } from './GameViewport';
 import type { PlayerEntity } from '../types/game';
 
+export interface PanelsOpen {
+  mine: boolean;
+  foe: boolean;
+}
+
 interface Props {
   engine: RoyaleEngine;
   view: ViewInfo;
+  /** "Vũ khí đã nhặt" panels: open = full panel, closed = a small chip (a tap switches) */
+  panelsOpen: PanelsOpen;
+  togglePanels: (side: keyof PanelsOpen) => void;
 }
 
 const mmss = (ms: number) => {
@@ -21,16 +29,12 @@ const mmss = (ms: number) => {
 const titleStroke =
   '-2px -2px 0 #1d4ed8, 2px -2px 0 #1d4ed8, -2px 2px 0 #1d4ed8, 2px 2px 0 #1d4ed8, 0 0 14px #60a5fa';
 
-export const RoyaleHUD: React.FC<Props> = ({ engine: e, view }) => {
+export const RoyaleHUD: React.FC<Props> = ({ engine: e, view, panelsOpen, togglePanels }) => {
   const p1 = e.players[e.mySeat]; // left = my team (me first), right = the enemy team
   const myTeam = teamOf(e.mySeat);
   const allies = [p1, ...e.players.filter((p) => teamOf(p.idx) === myTeam && p.idx !== e.mySeat)];
   const foes = e.players.filter((p) => teamOf(p.idx) !== myTeam);
   const short = useShortScreen();
-  // "Vũ khí đã nhặt" panels fold into a small chip on a short screen; a tap opens / closes them
-  const [openPanels, setOpenPanels] = useState<{ mine: boolean; foe: boolean } | null>(null);
-  const panelsOpen = openPanels ?? { mine: !short, foe: !short };
-  const togglePanels = (side: 'mine' | 'foe') => setOpenPanels({ ...panelsOpen, [side]: !panelsOpen[side] });
   const multi = e.players.length > 2;
   const inCollect = e.phase === 'collect';
   const showTitle = e.phase === 'intro' || e.phase === 'collect';

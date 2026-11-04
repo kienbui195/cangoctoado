@@ -55,7 +55,7 @@ const BOX_TOP_MARGIN = 175; // gift boxes never spawn above this (the HUD covers
 const BOX_EDGE_MARGIN = 260; // gift boxes stay this far from the left/right edge of the map (cropped on 16:9 screens)
 const BOX_CORNER_W = 500; // ...and out of the bottom corners below BOX_CORNER_TOP, where the weapon panels sit
 const BOX_CORNER_TOP = 560;
-const BOXES_ON_MAP = 10; // red 1-2, blue 1-2, the rest white (rolled per match)
+const BOXES_ON_MAP = 10; // red 2-3, blue 3-4, the rest white (rolled per match)
 const BOX_RESPAWN_MS = 2500;
 const BOX_AVOID_R = 340; // a new box keeps this far from the spots where the last boxes vanished
 const BOX_AVOID_KEEP = 4; // how many recently vanished spots are remembered
@@ -581,8 +581,8 @@ export class RoyaleEngine {
   /** where the last boxes were hit: a new box never pops up right where one just disappeared (right or wrong answer) */
   private vanished: { x: number; y: number }[] = [];
   private boxTarget: Record<Tier, number> = (() => {
-    const red = randInt(1, 2);
-    const blue = randInt(1, 2);
+    const red = randInt(2, 3);
+    const blue = randInt(3, 4);
     return { red, blue, white: BOXES_ON_MAP - red - blue };
   })();
   private dots: { at: number; target: Seat; amount: number; src: Seat }[] = [];
@@ -1380,7 +1380,7 @@ export class RoyaleEngine {
     if (initial) this.respawn = [];
   }
 
-  /** The tier most below its quota (boxes on the map + already queued), so the 1-2 / 1-2 / rest mix is kept. */
+  /** The tier most below its quota (boxes on the map + already queued), so the 2-3 red / 3-4 blue / rest white mix is kept. */
   private nextBoxTier(): Tier {
     const have: Record<Tier, number> = { white: 0, blue: 0, red: 0 };
     this.boxes.forEach((b) => have[b.tier]++);

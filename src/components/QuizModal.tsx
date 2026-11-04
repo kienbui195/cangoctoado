@@ -30,7 +30,7 @@ export const QuizModal: React.FC<{ engine: RoyaleEngine; io: GameIO }> = ({ engi
   return (
     <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 short:p-2">
       <div
-        className="w-full max-w-xl short:max-w-3xl max-h-full overflow-y-auto overscroll-contain rounded-3xl short:rounded-2xl bg-slate-900 p-6 short:px-4 short:py-2.5 shadow-2xl"
+        className="w-full max-w-xl short:w-fit short:min-w-[380px] short:max-w-[600px] max-h-full overflow-y-auto overscroll-contain rounded-3xl short:rounded-2xl bg-slate-900 p-6 short:px-4 short:py-2.5 shadow-2xl"
         style={{ border: `3px solid ${tier.color}`, boxShadow: `0 0 40px ${tier.color}55` }}
       >
         <div className="flex items-center justify-between mb-4 short:mb-1.5">

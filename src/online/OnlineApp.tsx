@@ -446,7 +446,7 @@ const OnlineGame: React.FC<{ client: OnlineClient; room: RoomView }> = ({ client
       )}
       renderResult={() => (
         <MatchSummary engine={e}>
-          {room.notice && <div className="mb-3 text-xs text-amber-200">{room.notice}</div>}
+          {room.notice && <div className="mb-3 short:mb-1 text-xs text-amber-200">{room.notice}</div>}
           <div className="flex gap-3">
             <button
               onClick={() => {
@@ -454,11 +454,11 @@ const OnlineGame: React.FC<{ client: OnlineClient; room: RoomView }> = ({ client
                 client.vote(true);
               }}
               disabled={!!me?.vote}
-              className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-sm rounded-xl shadow-lg transition active:scale-95 disabled:opacity-60"
+              className="flex-1 py-3 short:py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-sm rounded-xl shadow-lg transition active:scale-95 disabled:opacity-60"
             >
               {alone ? (me?.vote ? 'ĐANG VỀ PHÒNG CHỜ...' : 'VỀ PHÒNG CHỜ') : me?.vote ? (multi ? `ĐÃ ĐỒNG Ý · CHỜ ${waitingFor} NGƯỜI NỮA...` : 'ĐÃ ĐỒNG Ý · ĐANG CHỜ ĐỐI THỦ...') : others.some((o) => o.vote) ? `CHƠI LẠI (${others.filter((o) => o.vote).length}/${others.length} người đã đồng ý ✔)` : 'CHƠI LẠI'}
             </button>
-            <button onClick={() => client.vote(false)} className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-rose-300 font-bold text-sm rounded-xl border border-rose-500/30 transition">
+            <button onClick={() => client.vote(false)} className="px-4 py-3 short:py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 font-bold text-sm rounded-xl border border-rose-500/30 transition">
               Thoát phòng
             </button>
           </div>

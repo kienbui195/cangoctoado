@@ -2,6 +2,16 @@
 
 /* short = a landscape phone (little height): HUD, banners and windows get a compact size */
 @custom-variant short (@media (max-height: 540px));
+/* a touch device held upright: the game asks to be turned sideways */
+@custom-variant portrait-touch (@media (orientation: portrait) and (pointer: coarse));
+
+@keyframes rotate-hint {
+  0%, 20% { transform: rotate(0deg); }
+  55%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+.rotate-hint-phone { animation: rotate-hint 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .rotate-hint-phone { animation: none; transform: rotate(-90deg); } }
 
 /* LEGEND weapons shimmer */
 @keyframes legend-glow {

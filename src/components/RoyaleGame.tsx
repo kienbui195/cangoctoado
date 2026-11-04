@@ -25,14 +25,14 @@ export const RoyaleGame: React.FC<{ onExit: () => void; level: BotLevel }> = ({ 
         exitLabel="Thoát"
         renderResult={() => (
           <MatchSummary engine={engine}>
-            <div className="mb-2 text-center text-xs text-slate-400">Đã chơi với bot: <b className="text-amber-300">{BOT_LEVELS[level].label}</b></div>
-            <div className="flex flex-wrap gap-3">
+            <div className="mb-2 short:mb-1 text-center text-xs text-slate-400">Đã chơi với bot: <b className="text-amber-300">{BOT_LEVELS[level].label}</b></div>
+            <div className="flex flex-wrap gap-3 short:gap-2">
               <button
                 onClick={() => {
                   soundManager.playClick();
                   setPickOpen(true);
                 }}
-                className="flex-1 min-w-[140px] py-3 bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-sm rounded-xl border border-sky-500/30 transition"
+                className="flex-1 min-w-[140px] py-3 short:py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-sm rounded-xl border border-sky-500/30 transition"
               >
                 ĐỘ KHÓ KHÁC
               </button>
@@ -41,11 +41,11 @@ export const RoyaleGame: React.FC<{ onExit: () => void; level: BotLevel }> = ({ 
                   soundManager.playClick();
                   setEngine(makeEngine(level));
                 }}
-                className="flex-1 min-w-[140px] py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-sm rounded-xl shadow-lg transition active:scale-95"
+                className="flex-1 min-w-[140px] py-3 short:py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-sm rounded-xl shadow-lg transition active:scale-95"
               >
                 CHƠI LẠI
               </button>
-              <button onClick={onExit} className="flex-1 min-w-[140px] px-4 py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-sm rounded-xl border border-amber-500/30 transition">
+              <button onClick={onExit} className="flex-1 min-w-[140px] px-4 py-3 short:py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-sm rounded-xl border border-amber-500/30 transition">
                 Về phòng chờ
               </button>
             </div>
