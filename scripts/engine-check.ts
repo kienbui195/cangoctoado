@@ -1,7 +1,8 @@
 // Headless checks for the multi-seat engine. Run: npx tsx scripts/engine-check.ts
-import { RoyaleEngine, QUIZ_LIMIT_MS, sinhBonusAt, sameBonusAt, teamOf, type Snapshot } from '../src/game/royaleEngine';
+import { RoyaleEngine, randomBoxSpot, QUIZ_LIMIT_MS, sinhBonusAt, sameBonusAt, teamOf, type Snapshot } from '../src/game/royaleEngine';
 import { makeOwned } from '../src/data/royaleWeapons';
 import { baseProfile } from '../src/game/baseProfile';
+import { terrainHeight } from '../src/utils/terrain';
 
 const prof = baseProfile;
 let failed = 0;
@@ -374,6 +375,47 @@ const run = (e: RoyaleEngine, ms: number) => {
   }
   ok(placed === 40, '2v2: a box is always respawned');
   ok(xs.size >= 8, `2v2: respawned boxes land in many places (${xs.size} x-buckets)`);
+}
+
+// gift boxes of any tier can appear anywhere in the open area: high, mid-air, on the ground, all across the map
+{
+  const cells = new Set<string>();
+  let high = 0, mid = 0, ground = 0, corner = 0, edge = 0;
+  const N = 3000;
+  for (let n = 0; n < N; n++) {
+    const { x, y } = randomBoxSpot();
+    cells.add(`${Math.floor(x / 100)},${Math.floor(y / 100)}`);
+    const floor = terrainHeight(x) - 26;
+    if (y < 300) high++;
+    else if (y >= floor - 1) ground++;
+    else mid++;
+    if (y > 560 && (x < 500 || x > 1420)) corner++;
+    if (x < 260 || x > 1660 || y < 175) edge++;
+  }
+  ok(high > N * 0.1 && mid > N * 0.2 && ground > N * 0.2, `boxes spread over every height (high ${high}, mid ${mid}, ground ${ground})`);
+  ok(cells.size >= 40, `boxes spread over many 100px cells (${cells.size})`);
+  ok(corner === 0 && edge === 0, 'no box under the bottom-corner HUD or hugging the map edge');
+  const e: any = new RoyaleEngine([prof('A'), prof('B')]);
+  ok(e.boxes.length === 10, 'a new map still starts with 10 boxes');
+}
+
+// a box that was just hit (right or wrong answer) never pops up again in the same spot
+{
+  const e: any = new RoyaleEngine([prof('A'), prof('B')]);
+  let near = 0;
+  let missing = 0;
+  const N = 300;
+  for (let n = 0; n < N; n++) {
+    const box = e.boxes[Math.floor(Math.random() * e.boxes.length)];
+    const count = e.boxes.length;
+    e.hitBox(e.players[1], box);
+    e.spawnBox(box.tier);
+    if (e.boxes.length !== count) missing++;
+    const fresh = e.boxes[e.boxes.length - 1];
+    if (Math.hypot(fresh.x - box.x, fresh.y - box.y) < 250) near++;
+  }
+  ok(missing === 0, 'respawn always puts the box back on the map');
+  ok(near === 0, `respawned box lands far from the spot that just emptied (${near}/${N} within 250px)`);
 }
 
 // power bar drawing value glides between 60 Hz steps and bounces at 0 / 100

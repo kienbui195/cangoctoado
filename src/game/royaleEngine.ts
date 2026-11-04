@@ -52,9 +52,13 @@ const SHELL_RADIUS = 8;
 const BOX_HIT_R = BOX_RADIUS + SHELL_RADIUS;
 const TARGET_HIT_R = 28;
 const BOX_TOP_MARGIN = 175; // gift boxes never spawn above this (the HUD covers the top of the screen)
-const BOX_EDGE_MARGIN = 260; // gift boxes stay this far from the left/right edge of the map
+const BOX_EDGE_MARGIN = 260; // gift boxes stay this far from the left/right edge of the map (cropped on 16:9 screens)
+const BOX_CORNER_W = 500; // ...and out of the bottom corners below BOX_CORNER_TOP, where the weapon panels sit
+const BOX_CORNER_TOP = 560;
 const BOXES_ON_MAP = 10; // red 1-2, blue 1-2, the rest white (rolled per match)
 const BOX_RESPAWN_MS = 2500;
+const BOX_AVOID_R = 340; // a new box keeps this far from the spots where the last boxes vanished
+const BOX_AVOID_KEEP = 4; // how many recently vanished spots are remembered
 export const QUIZ_LIMIT_MS = 20 * 1000; // an unanswered question counts as wrong
 const QUIZ_CLOSE_OK_MS = 2600;
 const QUIZ_CLOSE_BAD_MS = 1700;
@@ -397,6 +401,21 @@ export function advanceCharge(p: { charge: number; chargeDir: 1 | -1 }) {
 /** Standing Y for a character at world x (feet 1px above the ground, like the classic mode). */
 export const groundY = (x: number) => Math.floor(terrainHeight(x)) - 1;
 
+/**
+ * A random spot for a gift box: from the top margin down to the ground, away from the left/right edge, and never
+ * under the HUD that sits in the bottom corners (weapon panels, zoom buttons). About 1 box in 3 sits on the ground.
+ */
+export function randomBoxSpot(): { x: number; y: number } {
+  for (;;) {
+    const x = rand(BOX_EDGE_MARGIN, WORLD_W - BOX_EDGE_MARGIN);
+    const floor = terrainHeight(x) - BOX_RADIUS - 4; // sitting on the surface, never buried
+    const y = Math.random() < 0.33 ? floor : rand(BOX_TOP_MARGIN, floor);
+    if (floor < BOX_TOP_MARGIN) continue;
+    if (y > BOX_CORNER_TOP && (x < BOX_CORNER_W || x > WORLD_W - BOX_CORNER_W)) continue;
+    return { x, y };
+  }
+}
+
 interface SimResult {
   hit: boolean;
   err: number;
@@ -558,7 +577,9 @@ export class RoyaleEngine {
   private acc = 0;
   private boxId = 0;
   private shellId = 0;
-  private respawn: { at: number; tier: Tier; avoid?: { x: number; y: number } }[] = [];
+  private respawn: { at: number; tier: Tier }[] = [];
+  /** where the last boxes were hit: a new box never pops up right where one just disappeared (right or wrong answer) */
+  private vanished: { x: number; y: number }[] = [];
   private boxTarget: Record<Tier, number> = (() => {
     const red = randInt(1, 2);
     const blue = randInt(1, 2);
@@ -1122,7 +1143,7 @@ export class RoyaleEngine {
     const box = ct?.box;
     if (box) {
       const tier = correct ? this.nextBoxTier() : box.tier;
-      this.respawn.push({ at: this.time + BOX_RESPAWN_MS, tier, avoid: correct ? undefined : { x: box.x, y: box.y } });
+      this.respawn.push({ at: this.time + BOX_RESPAWN_MS, tier });
     }
     if (ct && ct.seat === p.idx) this.endTurn_collect();
   }
@@ -1297,6 +1318,8 @@ export class RoyaleEngine {
 
   private hitBox(p: RPlayer, box: Box) {
     this.boxes = this.boxes.filter((b) => b.id !== box.id);
+    this.vanished.push({ x: box.x, y: box.y });
+    if (this.vanished.length > BOX_AVOID_KEEP) this.vanished.shift();
     for (const q of this.players) if (q.selectedBoxId === box.id) q.selectedBoxId = null;
     const t = TIERS[box.tier];
     this.burst(box.x, box.y, t.color, ['🎁', '✨', '⭐'], 22, 7);
@@ -1369,35 +1392,32 @@ export class RoyaleEngine {
   private stepRespawn() {
     for (let i = this.respawn.length - 1; i >= 0; i--) {
       if (this.time >= this.respawn[i].at) {
-        this.spawnBox(this.respawn[i].tier, this.respawn[i].avoid);
+        this.spawnBox(this.respawn[i].tier);
         this.respawn.splice(i, 1);
       }
     }
   }
 
-  private spawnBox(tier: Tier, avoid?: { x: number; y: number }) {
-    for (let attempt = 0; attempt < 80; attempt++) {
-      let x: number;
-      let y: number;
-      if (tier === 'white') {
-        // on the ground (sitting on the surface, never buried)
-        x = rand(BOX_EDGE_MARGIN, WORLD_W - BOX_EDGE_MARGIN);
-        y = terrainHeight(x) - BOX_RADIUS - 4;
-      } else if (tier === 'blue') {
-        // floating mid-air
-        x = rand(BOX_EDGE_MARGIN, WORLD_W - BOX_EDGE_MARGIN);
-        y = terrainHeight(x) - rand(150, 270);
-      } else {
-        // very high (never hugging the map edge: the corners of the screen hold the HUD)
-        x = rand(BOX_EDGE_MARGIN, WORLD_W - BOX_EDGE_MARGIN);
-        y = rand(BOX_TOP_MARGIN, BOX_TOP_MARGIN + 150);
-      }
-      if (y < BOX_TOP_MARGIN || terrainHeight(x) - y < (tier === 'white' ? 20 : 110)) continue;
+  /**
+   * Put a box of this tier on the map, anywhere in the open play area (any tier, any height: players walk and turn
+   * their angle, so every spot can be shot by someone). Candidates that overlap another box are dropped; among the rest the first one far
+   * enough from every recently vanished spot wins, otherwise the one farthest from them, above all from the latest one
+   * (so a box is always placed).
+   */
+  private spawnBox(tier: Tier) {
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const { x, y } = randomBoxSpot();
       if (this.boxes.some((b) => Math.hypot(b.x - x, b.y - y) < BOX_RADIUS * 2 + 2)) continue; // touching is fine, overlapping is not
-      if (avoid && Math.hypot(avoid.x - x, avoid.y - y) < 260) continue; // a wrong answer moves the box somewhere else
-      this.boxes.push({ id: ++this.boxId, x, y, r: BOX_RADIUS, tier, phase: Math.random() * 6 });
-      return;
+      // the spot that emptied last counts double: being far from it matters most
+      const dist = (v: { x: number; y: number }) => Math.min(BOX_AVOID_R, Math.hypot(v.x - x, v.y - y));
+      const last = this.vanished[this.vanished.length - 1];
+      const d = (last ? dist(last) : BOX_AVOID_R) * 2 + this.vanished.reduce((m, v) => Math.min(m, dist(v)), BOX_AVOID_R);
+      if (!best || d > best.d) best = { x, y, d };
+      if (d >= BOX_AVOID_R * 3) break;
     }
+    if (!best) return;
+    this.boxes.push({ id: ++this.boxId, x: best.x, y: best.y, r: BOX_RADIUS, tier, phase: Math.random() * 6 });
   }
 
   // ================================================================= ARRANGE
@@ -1419,6 +1439,7 @@ export class RoyaleEngine {
     // keep the world tidy for the next screen
     this.boxes = [];
     this.respawn = [];
+    this.vanished = [];
     this.shells = [];
     this.setPhase('arrange');
   }

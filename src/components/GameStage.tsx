@@ -5,6 +5,7 @@ import { RoyaleCanvas } from './RoyaleCanvas';
 import { RoyaleHUD } from './RoyaleHUD';
 import { QuizModal } from './QuizModal';
 import { ArrangePanel } from './ArrangePanel';
+import { ioPad, PadToggle, VirtualPad, useVirtualPadSetting } from './VirtualPad';
 import { RoyaleEngine, TEAM_COLOR, teamOf } from '../game/royaleEngine';
 import { bindGameKeys, GameIO } from '../game/gameIO';
 import { isSolid, WORLD_H, WORLD_W } from '../utils/terrain';
@@ -35,10 +36,13 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
   });
   const [, setTick] = useState(0);
   const [muted, setMuted] = useState(!soundManager.enabled);
+  const [padOn, setPadOn] = useVirtualPadSetting();
+  const pad = useMemo(() => ioPad(io), [io]);
 
   // HUD refresh (the canvas runs on its own rAF loop)
   useEffect(() => {
-    const id = window.setInterval(() => setTick((t) => (t + 1) % 1e9), 50);
+    // 10 Hz is plenty for the clocks; the canvas and the power bar run on their own rAF loops
+    const id = window.setInterval(() => setTick((t) => (t + 1) % 1e9), 100);
     const unsub = engine.subscribe(() => setTick((t) => (t + 1) % 1e9));
     return () => {
       window.clearInterval(id);
@@ -74,6 +78,9 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
             <RoyaleHUD engine={engine} view={view} />
             {renderStatus?.()}
             {engine.phase === 'arrange' && !engine.players[engine.mySeat].out && <ArrangePanel engine={engine} io={io} />}
+            {padOn && engine.phase === 'collect' && !engine.quiz && !engine.players[engine.mySeat].out && (
+              <VirtualPad control={pad} active={engine.canAim(engine.mySeat)} charging={engine.players[engine.mySeat].charging} insetLeft={132} insetRight={184} />
+            )}
             {engine.quiz && <QuizModal engine={engine} io={io} />}
             {engine.phase === 'result' && engine.result && renderResult()}
 
@@ -91,6 +98,7 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
               >
                 {muted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
               </button>
+              <PadToggle on={padOn} onChange={setPadOn} />
             </div>
           </>
         )}

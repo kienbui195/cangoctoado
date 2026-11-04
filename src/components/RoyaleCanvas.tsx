@@ -22,6 +22,7 @@ export const RoyaleCanvas: React.FC<Props> = ({ engine }) => {
   useEffect(() => {
     const terrain = createTerrainCanvas();
     (window as any).__gunnyTerrainCanvas = terrain; // mini map
+    const backdrop = createBackdrop(terrain); // sky + clouds + ground never change: one blit per frame instead of redrawing them
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
@@ -35,7 +36,7 @@ export const RoyaleCanvas: React.FC<Props> = ({ engine }) => {
       fxQuality.feed(now - last);
       last = now;
       drain(engine, sfxState);
-      draw(ctx, engine, terrain, now);
+      draw(ctx, engine, backdrop, now);
       raf = requestAnimationFrame(frame);
     };
     // debug hook: lets tests (or a hidden tab) advance the simulation manually
@@ -44,7 +45,7 @@ export const RoyaleCanvas: React.FC<Props> = ({ engine }) => {
       step: (ms: number) => {
         for (let t = 0; t < ms; t += 1000 / 60) engine.update(1000 / 60);
         drain(engine, sfxState);
-        draw(ctx, engine, terrain, performance.now());
+        draw(ctx, engine, backdrop, performance.now());
       },
     };
     raf = requestAnimationFrame(frame);
@@ -130,10 +131,12 @@ function drawReaction(ctx: CanvasRenderingContext2D, e: RoyaleEngine, p: RPlayer
   ctx.fillText(r.emoji, p.x, p.y - 112 - rise);
   ctx.restore();
 }
-function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanvasElement, now: number) {
-  ctx.save();
-  if (e.shake > 0.3) ctx.translate((Math.random() - 0.5) * e.shake, (Math.random() - 0.5) * e.shake);
-
+/** The still part of the world (sky gradient, clouds, ground), drawn once. */
+function createBackdrop(terrain: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = WORLD_W;
+  c.height = WORLD_H;
+  const ctx = c.getContext('2d')!;
   // sky
   const sky = ctx.createLinearGradient(0, 0, 0, WORLD_H);
   sky.addColorStop(0, '#0f172a');
@@ -141,7 +144,7 @@ function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanva
   sky.addColorStop(0.8, '#334155');
   sky.addColorStop(1, '#0f766e');
   ctx.fillStyle = sky;
-  ctx.fillRect(-20, -20, WORLD_W + 40, WORLD_H + 40);
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
 
   // clouds
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -161,6 +164,17 @@ function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, terrain: HTMLCanva
   ctx.fill();
 
   ctx.drawImage(terrain, 0, 0);
+  return c;
+}
+
+function draw(ctx: CanvasRenderingContext2D, e: RoyaleEngine, backdrop: HTMLCanvasElement, now: number) {
+  ctx.save();
+  if (e.shake > 0.3) {
+    ctx.fillStyle = '#0f172a'; // the strip uncovered by the shake
+    ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    ctx.translate((Math.random() - 0.5) * e.shake, (Math.random() - 0.5) * e.shake);
+  }
+  ctx.drawImage(backdrop, 0, 0);
 
   // wind streaks
   ctx.strokeStyle = 'rgba(186,230,253,0.10)';

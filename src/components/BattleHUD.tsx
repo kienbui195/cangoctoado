@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { keyboardPad, PadToggle, VirtualPad, useVirtualPadSetting } from './VirtualPad';
 import { BattleSkill, BattleSkillId, PlayerEntity, WindState } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { GunnyRuler } from './GunnyRuler';
@@ -85,6 +86,8 @@ export const BattleHUD: React.FC<Props> = ({
   const chargingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const chargeStartTimeRef = useRef<number>(0);
   const [audioMuted, setAudioMuted] = useState(false);
+  const [padOn, setPadOn] = useVirtualPadSetting();
+  const pad = useMemo(keyboardPad, []);
 
   // Toggle sound
   const handleToggleSound = () => {
@@ -381,6 +384,8 @@ export const BattleHUD: React.FC<Props> = ({
           <span>Tính Góc/Lực</span>
         </button>
 
+        <PadToggle on={padOn} onChange={setPadOn} />
+
         {/* Sound toggle */}
         <button
           onClick={handleToggleSound}
@@ -399,6 +404,9 @@ export const BattleHUD: React.FC<Props> = ({
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+
+      {/* room for the skills column (left) and the tool buttons + mini-map (right) */}
+      {padOn && <VirtualPad control={pad} active={isHumanTurn} charging={isCharging} insetLeft={128} insetRight={212} />}
 
       {/* Bottom Main Combat Controls: Skills Bar + Angle + Power Bar */}
       <>
