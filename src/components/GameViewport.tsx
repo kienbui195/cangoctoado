@@ -5,6 +5,7 @@ export const WORLD_WIDTH = 1920;
 export const WORLD_HEIGHT = 850;
 
 const MAX_SCALE = 3;
+const MIN_ZOOM_OF_FIT = 0.7;
 const FIT_MARGIN_X = 260;
 const FIT_MARGIN_Y = 300;
 
@@ -37,7 +38,26 @@ const PLAYER_COLORS = ['#f59e0b', '#06b6d4'];
 
 /** Where the mini-map sits (and the right-hand weapon panels below it) when each team shows `perTeam` stacked cards. */
 export const CARD_H = 58;
-export const minimapTopFor = (perTeam: number) => Math.max(58, 4 + perTeam * CARD_H - 4);
+/** player card height on a short (landscape phone) screen */
+export const CARD_H_SHORT = 40;
+export const minimapTopFor = (perTeam: number, short = false) => {
+  const h = short ? CARD_H_SHORT : CARD_H;
+  return Math.max(h, 4 + perTeam * h - 4);
+};
+
+const SHORT_QUERY = '(max-height: 540px)'; // same as the `short:` variant in index.css
+/** True on a short screen (phone held sideways): the HUD switches to its compact size. */
+export function useShortScreen(): boolean {
+  const [short, setShort] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(SHORT_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.(SHORT_QUERY);
+    if (!mq) return;
+    const on = () => setShort(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return short;
+}
 export const MINIMAP_BLOCK_H = 110;
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -62,17 +82,17 @@ export const GameViewport: React.FC<Props> = ({ focusPoints, markers, minimapTop
     return () => ro.disconnect();
   }, []);
 
-  const minScale = Math.max(size.w / WORLD_WIDTH, size.h / WORLD_HEIGHT);
+  // auto framing keeps the world covering the whole screen; zooming out by hand may go down to the whole map in view
+  const coverScale = Math.max(size.w / WORLD_WIDTH, size.h / WORLD_HEIGHT);
+  // below the whole-map size too, so the HUD cards sit over the empty frame instead of over the battlefield
+  const minScale = Math.min(size.w / WORLD_WIDTH, size.h / WORLD_HEIGHT) * MIN_ZOOM_OF_FIT;
 
-  // Keep the world covering the whole viewport (no empty edges)
+  // No empty edge while the world is bigger than the screen; once it is smaller (zoomed out), it sits in the middle
   const constrain = useCallback(
     (c: Camera): Camera => {
       const scale = clamp(c.scale, minScale, MAX_SCALE);
-      return {
-        scale,
-        tx: clamp(c.tx, size.w - WORLD_WIDTH * scale, 0),
-        ty: clamp(c.ty, size.h - WORLD_HEIGHT * scale, 0),
-      };
+      const fit = (t: number, view: number, world: number) => (world <= view ? (view - world) / 2 : clamp(t, view - world, 0));
+      return { scale, tx: fit(c.tx, size.w, WORLD_WIDTH * scale), ty: fit(c.ty, size.h, WORLD_HEIGHT * scale) };
     },
     [minScale, size.w, size.h]
   );
@@ -87,9 +107,9 @@ export const GameViewport: React.FC<Props> = ({ focusPoints, markers, minimapTop
     const scale = Math.min(size.w / (maxX - minX), size.h / (maxY - minY));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
-    const s = clamp(scale, minScale, MAX_SCALE);
+    const s = clamp(scale, coverScale, MAX_SCALE);
     return constrain({ scale: s, tx: size.w / 2 - cx * s, ty: size.h / 2 - cy * s });
-  }, [focusPoints, size.w, size.h, minScale, constrain]);
+  }, [focusPoints, size.w, size.h, coverScale, constrain]);
 
   const focusKey = focusPoints.map((p) => `${Math.round(p.x / 8)},${Math.round(p.y / 8)}`).join('|');
 
@@ -247,8 +267,7 @@ export const GameViewport: React.FC<Props> = ({ focusPoints, markers, minimapTop
           ref={mapRef}
           width={MINIMAP_W}
           height={MINIMAP_H}
-          className="block rounded cursor-crosshair"
-          style={{ width: MINIMAP_W, height: MINIMAP_H }}
+          className="block rounded cursor-crosshair w-[200px] h-[89px] short:w-[130px] short:h-[58px]"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             moveFromMinimap(e);

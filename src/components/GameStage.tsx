@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
-import { GameViewport, minimapTopFor } from './GameViewport';
+import { DoorOpen, Volume2, VolumeX } from 'lucide-react';
+import { GameViewport, minimapTopFor, useShortScreen } from './GameViewport';
 import { RoyaleCanvas } from './RoyaleCanvas';
 import { RoyaleHUD } from './RoyaleHUD';
 import { QuizModal } from './QuizModal';
@@ -37,6 +37,7 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
   const [, setTick] = useState(0);
   const [muted, setMuted] = useState(!soundManager.enabled);
   const [padOn, setPadOn] = useVirtualPadSetting();
+  const short = useShortScreen();
   const pad = useMemo(() => ioPad(io), [io]);
 
   // HUD refresh (the canvas runs on its own rAF loop)
@@ -70,7 +71,7 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
       <GameViewport
         focusPoints={battleView ? battlePoints : WORLD_CORNERS}
         markers={markers}
-        minimapTop={minimapTopFor(engine.players.length / 2)}
+        minimapTop={minimapTopFor(engine.players.length / 2, short)}
         onWorldClick={(x, y) => io.selectBoxAt(x, y)}
         world={<RoyaleCanvas engine={engine} />}
         overlay={(view) => (
@@ -85,8 +86,8 @@ export const GameStage: React.FC<Props> = ({ engine, io, onExit, exitLabel = 'Th
             {engine.phase === 'result' && engine.result && renderResult()}
 
             <div data-hud className="absolute left-2 bottom-2 z-40 flex gap-1 pointer-events-auto">
-              <button onClick={onExit} className="px-2.5 py-1.5 rounded-lg bg-slate-900/85 border border-slate-700 text-slate-200 hover:bg-slate-800 text-xs font-bold flex items-center gap-1" title={exitLabel}>
-                <ArrowLeft className="w-3.5 h-3.5" /> {exitLabel}
+              <button onClick={onExit} className="p-1.5 rounded-lg bg-slate-900/85 border border-slate-700 text-rose-300 hover:bg-slate-800" title={exitLabel} aria-label={exitLabel}>
+                <DoorOpen className="w-4 h-4" />
               </button>
               <button
                 onClick={() => {

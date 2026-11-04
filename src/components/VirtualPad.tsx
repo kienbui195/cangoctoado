@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Gamepad2 } from 'lucide-react';
 import type { GameIO } from '../game/gameIO';
 
 // On-screen controls for phones / tablets without a keyboard: ◀ ▶ walk + turn, ▲ ▼ angle, a big button to hold (charge) and release (fire).
@@ -188,10 +189,11 @@ export const VirtualPad: React.FC<PadProps> = ({ control, active, charging, inse
 export const PadToggle: React.FC<{ on: boolean; onChange: (on: boolean) => void; className?: string }> = ({ on, onChange, className = '' }) => (
   <button
     onClick={() => onChange(!on)}
-    className={`px-2 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 pointer-events-auto ${on ? 'bg-amber-400 border-amber-200 text-slate-950' : 'bg-slate-900/85 border-slate-700 text-slate-200 hover:bg-slate-800'} ${className}`}
+    className={`p-1.5 rounded-lg border flex items-center pointer-events-auto ${on ? 'bg-amber-400 border-amber-200 text-slate-950' : 'bg-slate-900/85 border-slate-700 text-slate-200 hover:bg-slate-800'} ${className}`}
     title="Bật/Tắt phím ảo (cho điện thoại, máy tính bảng)"
+    aria-label="Phím ảo"
     aria-pressed={on}
   >
-    🎮 Phím ảo
+    <Gamepad2 className="w-4 h-4" />
   </button>
 );

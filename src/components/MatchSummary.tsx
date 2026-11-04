@@ -75,9 +75,9 @@ export const MatchSummary: React.FC<{ engine: RoyaleEngine; children: React.Reac
   const title = r.winner === null ? 'HÒA NHAU!' : r.winner === teamOf(me) ? 'BẠN CHIẾN THẮNG!' : 'BẠN THUA RỒI!';
   const hp = (seat: number): Hp => ({ hp: e.players[seat].hp, max: e.players[seat].maxHp });
   return (
-    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-7 rounded-3xl text-center max-w-2xl w-full shadow-2xl shadow-amber-500/20 my-auto">
-        <div className="text-5xl mb-1">{r.winner === null ? '🤝' : r.winner === teamOf(me) ? '🏆' : '💔'}</div>
+    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 short:p-2 overflow-y-auto">
+      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-7 short:p-3 rounded-3xl short:rounded-2xl text-center max-w-2xl w-full shadow-2xl shadow-amber-500/20 my-auto">
+        <div className="text-5xl short:text-3xl mb-1">{r.winner === null ? '🤝' : r.winner === teamOf(me) ? '🏆' : '💔'}</div>
         <h3 className="text-3xl font-black text-amber-400 font-['Fredoka'] mb-1">{title}</h3>
         <p className="text-slate-300 text-sm mb-4">
           {r.winner !== null ? (
@@ -129,9 +129,9 @@ const TeamSummary: React.FC<{ engine: RoyaleEngine; children: React.ReactNode }>
   const bg = (t: Team) => (t === 0 ? 'bg-amber-950/40' : 'bg-cyan-950/40');
 
   return (
-    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-6 rounded-3xl text-center max-w-4xl w-full shadow-2xl shadow-amber-500/20 my-auto">
-        <div className="text-5xl mb-1">{r.winner === null ? '🤝' : r.winner === myTeam ? '🏆' : '💔'}</div>
+    <div data-hud className="absolute inset-0 z-50 pointer-events-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 short:p-2 overflow-y-auto">
+      <div className="bg-slate-900 border-2 border-amber-400 p-5 md:p-6 short:p-3 rounded-3xl short:rounded-2xl text-center max-w-4xl w-full shadow-2xl shadow-amber-500/20 my-auto">
+        <div className="text-5xl short:text-3xl mb-1">{r.winner === null ? '🤝' : r.winner === myTeam ? '🏆' : '💔'}</div>
         <h3 className="text-3xl font-black text-amber-400 font-['Fredoka'] mb-1">{title}</h3>
         <p className="text-slate-300 text-sm mb-4">
           {r.winner !== null ? (

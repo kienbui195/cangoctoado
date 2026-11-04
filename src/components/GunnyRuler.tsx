@@ -57,7 +57,9 @@ export const GunnyRuler: React.FC<Props> = ({ view, shooter, target, windSpeed, 
   }, [visible, shooter.x, shooter.y, shooter.angle, target.x, target.y, facing, facingTarget, windSpeed]);
 
   // Fixed-size ruler (independent of camera zoom/pan): 0..TOTAL khúc, centered at the bottom edge
-  const rulerW = Math.max(300, Math.min(view.w - 140, 1260));
+  // on a short (phone) screen keep the bottom corners free for the exit / sound / pad buttons and the weapon chips
+  const side = view.h <= 540 ? 120 : 70;
+  const rulerW = Math.max(300, Math.min(view.w - side * 2, 1260));
   const segPx = rulerW / TOTAL_SEGMENTS;
   const distPx = Math.min(segments, TOTAL_SEGMENTS) * segPx;
 

@@ -19,12 +19,12 @@ export const ArrangePanel: React.FC<{ engine: RoyaleEngine; io: GameIO }> = ({ e
   const slots = Math.max(MAX_LINEUP, me.lineup.length);
 
   return (
-    <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none z-40 px-2">
-      <div data-hud className="pointer-events-auto bg-slate-950/92 backdrop-blur-md border border-amber-500/50 rounded-2xl shadow-2xl p-3 max-w-full">
+    <div className="absolute inset-x-0 bottom-3 short:bottom-1 flex justify-center pointer-events-none z-40 px-2">
+      <div data-hud className="pointer-events-auto bg-slate-950/92 backdrop-blur-md border border-amber-500/50 rounded-2xl shadow-2xl p-3 short:p-1.5 max-w-full short:max-h-[calc(100dvh-90px)] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between gap-4 mb-2 flex-wrap">
           <div>
             <div className="text-sm font-black text-amber-300 font-['Fredoka'] tracking-wide">SẮP XẾP VŨ KHÍ RA TRẬN</div>
-            <div className="text-[11px] text-slate-400">Kéo thả hoặc dùng ◀ ▶ · Tối đa {MAX_LINEUP} vũ khí = {MAX_LINEUP} hiệp · Vũ khí dự bị không ra trận</div>
+            <div className="text-[11px] text-slate-400 short:hidden">Kéo thả hoặc dùng ◀ ▶ · Tối đa {MAX_LINEUP} vũ khí = {MAX_LINEUP} hiệp · Vũ khí dự bị không ra trận</div>
 
           </div>
           <div className="flex items-center gap-3 text-xs font-bold flex-wrap">
@@ -43,7 +43,7 @@ export const ArrangePanel: React.FC<{ engine: RoyaleEngine; io: GameIO }> = ({ e
           </div>
         </div>
 
-        <div className="mb-2"><ElementRules /></div>
+        <div className="mb-2 short:hidden"><ElementRules /></div>
 
         <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
           {Array.from({ length: slots }).map((_, i) => {

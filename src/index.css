@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* short = a landscape phone (little height): HUD, banners and windows get a compact size */
+@custom-variant short (@media (max-height: 540px));
+
 /* LEGEND weapons shimmer */
 @keyframes legend-glow {
   0%, 100% { box-shadow: 0 0 8px 1px rgba(251, 113, 133, 0.55), 0 0 18px 2px rgba(251, 191, 36, 0.25); }
